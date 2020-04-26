@@ -1,100 +1,128 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <stdbool.h>
 
-#include "SDL_GzRW.h"
-#include "SDL_rwops.h"
-#include "pcf.h"
-#include "pcfread.h"
+#include <SDL2/SDL.h>
 
-/*Use glyph to avoid collision with C 'char' type*/
-/*@param c: ascii code for the char to dump*/
-void dump_glpyh(FontRec *font, int c)
+#include "SDL_pcf.h"
+
+#define SCREEN_WIDTH 640
+#define SCREEN_HEIGHT 480
+
+
+/*Return true to quit the app*/
+bool handle_keyboard(SDL_KeyboardEvent *event)
 {
-    int w, h;
-    int line_bsize;
-    CharInfoRec *glyph;
-    BitmapFontRec *bitmapFont;
-
-    bitmapFont  = font->fontPrivate;
-    printf("Number of chars in font: %d\n",  bitmapFont->num_chars);
-    if(c >= bitmapFont->num_chars){
-        printf("No glyph for char %d\n",c);
-        return;
+    switch(event->keysym.sym){
+        case SDLK_ESCAPE:
+            if(event->state == SDL_PRESSED)
+                return true;
+            break;
     }
-    glyph = &bitmapFont->metrics[c];
+    return false;
+}
 
-    w = glyph->metrics.rightSideBearing - glyph->metrics.leftSideBearing;
-    h = glyph->metrics.ascent + glyph->metrics.descent;
+/*Return true to quit the app*/
+bool handle_events(void)
+{
+    SDL_Event event;
 
-    printf("\tleft side bearing: %d\n",glyph->metrics.leftSideBearing);
-    printf("\tright side bearing: %d\n",glyph->metrics.rightSideBearing);
-    printf("\twidth: %d\n",glyph->metrics.characterWidth);
-    printf("\tascent: %d\n",glyph->metrics.ascent);
-    printf("\tdescent: %d\n",glyph->metrics.descent);
-    printf("\tattributes: %d\n",glyph->metrics.attributes);
-
-
-    /* FontRec.Glyph seems to be the line padding in number of bytes.
-     * byte = 1, short = 2, int = 4
-     * The pcf format has PCF_GLYPH_PAD_INDEX(format)
-     * which indicates if lines are aligned to bytes(1), shorts(2)
-     * or ints(4). pcfReadFont compares that to its glyph param and
-     * re-pad the data to fit the format.
-     * */
-    printf("font->glyph is %d\n", font->glyph);
-    line_bsize = ceil(w/(font->glyph * 8.0))*font->glyph; /*in bytes*/
-    printf("Each glyph line will be %d bytes\n",line_bsize);
-
-
-    unsigned char *glyph_line;
-    unsigned char byte;
-    glyph_line = (unsigned char*)glyph->bits;
-    for(int i = 0; i < h; i++){
-        glyph_line = (unsigned char*)glyph->bits + (i * line_bsize);
-        int nbytes = ceil(w/(8.0));
-        for(int j = 0; j < nbytes; j++){
-            byte = *(unsigned char*)(glyph_line + j);
-            for(int k = 0; k < 8; k++){
-                printf("%c", (byte & (1 << k)) ? '#': '.');
-            }
+    while(SDL_PollEvent(&event) == 1){
+        switch(event.type){
+            case SDL_QUIT:
+                return true;
+                break;
+        case SDL_WINDOWEVENT:
+            if(event.window.event == SDL_WINDOWEVENT_CLOSE)
+                return true;
+            break;
+            case SDL_KEYUP:
+            case SDL_KEYDOWN:
+                return handle_keyboard(&(event.key));
+                break;
         }
-        printf("\n");
     }
-    printf("\n");
-    printf("\n");
+    return false;
 }
 
 
-
-int main(int argc, char *argv[])
+int main(int argc, char **argv)
 {
-    SDL_RWops *file;
-    FontRec font;
-    BitmapFontRec *bitmapFont;
-    CharInfoRec *ci;
+    SDL_Window* window = NULL;
+    SDL_Surface* screenSurface = NULL;
+    Uint32 black, white;
+    SDL_PcfFont *font;
+    Uint32 msg_w,msg_h;
+    bool done;
+    int i;
 
 
-    if(argc < 2){
-        printf("Usage: %s filename\n",argv[0]);
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        fprintf(stderr, "could not initialize sdl2: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    window = SDL_CreateWindow(
+                "hello_sdl2",
+                SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                SCREEN_WIDTH, SCREEN_HEIGHT,
+                SDL_WINDOW_SHOWN
+                );
+    if (window == NULL) {
+        fprintf(stderr, "could not create window: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    screenSurface = SDL_GetWindowSurface(window);
+    if(!screenSurface){
+        printf("Error: %s\n",SDL_GetError());
+        exit(-1);
+    }
+
+    font = SDL_PcfOpenFont("ter-x24n.pcf.gz");
+    if(!font){
+        printf("%s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
 
-    file = SDL_RWFromGzFile(argv[1], "rb");
-    if(!file){
-        printf("Couldn't open font %s\n",argv[1]);
-        exit(EXIT_FAILURE);
-    }
+    white = SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF);
+    black  = SDL_MapRGB(screenSurface->format, 0x00, 0x00, 0x00);
 
-    int glyph = 4;
-    int scan = 1;
-    pcfReadFont(&font, file, LSBFirst, LSBFirst, glyph, scan);
-    SDL_RWclose(file);
-    SDL_FreeRW(file);
+    done = false;
+    Uint32 ticks;
+    Uint32 last_ticks = 0;
+    Uint32 elapsed = 0;
 
-    dump_glpyh(&font, 'G');
+    SDL_FillRect(screenSurface, NULL, black);
 
-    pcfUnloadFont(&font);
-	exit(EXIT_SUCCESS);
+    char *message = "All your bases are belong to us";
+    int msglen = strlen(message);
+    SDL_PcfGetSizeRequest(message, font, &msg_w, &msg_h);
+
+    SDL_Rect location = {SCREEN_WIDTH/2 -1, SCREEN_HEIGHT/2 -1,0 ,0};
+    location.x -= (msg_w/2 -1);
+    int j = 0;
+    do{
+        ticks = SDL_GetTicks();
+        elapsed = ticks - last_ticks;
+
+        done = handle_events();
+        if( j < msglen){
+            SDL_PcfWriteChar(message[j], font, white, screenSurface, &location);
+            j++;
+        }
+
+        SDL_UpdateWindowSurface(window);
+
+        if(elapsed < 400){
+            SDL_Delay(400 - elapsed);
+        }
+        last_ticks = ticks;
+    }while(!done);
+    SDL_PcfCloseFont(font);
+
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return 0;
+
 }
-

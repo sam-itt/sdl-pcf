@@ -47,8 +47,6 @@ from The Open Group.
 
 #define GLYPHPADOPTIONS 4
 #define NO_SUCH_CHAR	-1
-#define Successful      85
-#define AllocError      80
 
 #ifndef MAX
 #define   MAX(a,b)    (((a)>(b)) ? a : b)

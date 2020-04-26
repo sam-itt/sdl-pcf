@@ -20,6 +20,9 @@
 #define NUM_SEGMENTS(n) \
   (((n)+BITMAP_FONT_SEGMENT_SIZE-1)/BITMAP_FONT_SEGMENT_SIZE)
 
+#define Successful      85
+#define AllocError      80
+
 
 typedef struct {
     Sint16 leftSideBearing,
