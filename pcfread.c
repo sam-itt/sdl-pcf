@@ -50,8 +50,6 @@ from The Open Group.
 #define Successful      85
 #define AllocError      80
 
-#define mallocarray(n, s)	reallocarray(NULL, n, s)
-
 #ifndef MAX
 #define   MAX(a,b)    (((a)>(b)) ? a : b)
 #endif
@@ -112,7 +110,7 @@ pcfReadTOC(SDL_RWops *file, int *countp)
 	SDL_SetError("pcfReadTOC(): invalid file format");
 	return NULL;
     }
-    tables = mallocarray(count, sizeof(PCFTableRec));
+    tables = SDL_calloc(count, sizeof(PCFTableRec));
     if (!tables) {
 	SDL_SetError("pcfReadTOC(): Couldn't allocate tables (%d*%d)",
 		 count, (int) sizeof(PCFTableRec));
@@ -130,7 +128,7 @@ pcfReadTOC(SDL_RWops *file, int *countp)
     return tables;
 
  Bail:
-    free(tables);
+    SDL_free(tables);
     return (PCFTablePtr) NULL;
 }
 
@@ -237,13 +235,13 @@ pcfGetProperties(FontInfoPtr pFontInfo, SDL_RWops *file,
 	goto Bail;
     }
     if (IS_EOF(file)) goto Bail;
-    props = mallocarray(nprops, sizeof(FontPropRec));
+    props = SDL_calloc(nprops, sizeof(FontPropRec));
     if (!props) {
 	SDL_SetError("pcfGetProperties(): Couldn't allocate props (%d*%d)",
 	       nprops, (int) sizeof(FontPropRec));
 	goto Bail;
     }
-    isStringProp = mallocarray(nprops, sizeof(char));
+    isStringProp = SDL_calloc(nprops, sizeof(char));
     if (!isStringProp) {
 	SDL_SetError("pcfGetProperties(): Couldn't allocate isStringProp (%d*%d)",
 	       nprops, (int) sizeof(char));
@@ -277,7 +275,7 @@ pcfGetProperties(FontInfoPtr pFontInfo, SDL_RWops *file,
     string_size = pcfGetINT32(file, format);
     if (string_size < 0) goto Bail;
     if (IS_EOF(file)) goto Bail;
-    strings = malloc(string_size);
+    strings = SDL_malloc(string_size);
     if (!strings) {
       SDL_SetError("pcfGetProperties(): Couldn't allocate strings (%d)", string_size);
 	goto Bail;
@@ -487,7 +485,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
         SDL_SetError("pcfReadFont(): invalid file format");
         goto Bail;
     }
-    metrics = mallocarray(nmetrics, sizeof(CharInfoRec));
+    metrics = SDL_calloc(nmetrics, sizeof(CharInfoRec));
     if (!metrics) {
     	SDL_SetError("pcfReadFont(): Couldn't allocate metrics (%d*%d)",
 		 nmetrics, (int) sizeof(CharInfoRec));
@@ -514,7 +512,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
     if (nbitmaps != nmetrics || IS_EOF(file))
     	goto Bail;
     /* nmetrics is already ok, so nbitmap also is */
-    offsets = mallocarray(nbitmaps, sizeof(Uint32));
+    offsets = SDL_calloc(nbitmaps, sizeof(Uint32));
     if (!offsets) {
     	SDL_SetError("pcfReadFont(): Couldn't allocate offsets (%d*%d)",
 		 nbitmaps, (int) sizeof(Uint32));
@@ -557,7 +555,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
     }
 
     /* guard against completely empty font */
-    bitmaps = malloc(sizebitmaps ? sizebitmaps : 1);
+    bitmaps = SDL_malloc(sizebitmaps ? sizebitmaps : 1);
     if (!bitmaps) {
       SDL_SetError("pcfReadFont(): Couldn't allocate bitmaps (%d)", sizebitmaps ? sizebitmaps : 1);
     	goto Bail;
@@ -594,7 +592,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
         xCharInfo  *metric;
 
         sizepadbitmaps = bitmapSizes[PCF_SIZE_TO_INDEX(glyph)];
-        padbitmaps = malloc(sizepadbitmaps);
+        padbitmaps = SDL_malloc(sizepadbitmaps);
         if (!padbitmaps) {
               SDL_SetError("pcfReadFont(): Couldn't allocate padbitmaps (%d)", sizepadbitmaps);
             goto Bail;
@@ -635,7 +633,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
         if (nink_metrics != nmetrics)
             goto Bail;
         /* nmetrics already checked */
-        ink_metrics = mallocarray(nink_metrics, sizeof(xCharInfo));
+        ink_metrics = SDL_calloc(nink_metrics, sizeof(xCharInfo));
         if (!ink_metrics) {
             SDL_SetError("pcfReadFont(): Couldn't allocate ink_metrics (%d*%d)",
                      nink_metrics, (int) sizeof(xCharInfo));
@@ -702,7 +700,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
 	if (!pcfGetAccel (&pFont->info, file, tables, ntables, PCF_BDF_ACCELERATORS))
 	    goto Bail;
 
-    bitmapFont = malloc(sizeof *bitmapFont);
+    bitmapFont = SDL_malloc(sizeof *bitmapFont);
     if (!bitmapFont) {
         SDL_SetError("pcfReadFont(): Couldn't allocate bitmapFont (%d)",
              (int) sizeof *bitmapFont);
