@@ -64,18 +64,6 @@ from The Open Group.
 #endif
 
 
-void
-pcfError(const char* message, ...)
-{
-    va_list args;
-
-    va_start(args, message);
-
-    fprintf(stderr, "PCF Error: ");
-    vfprintf(stderr, message, args);
-    va_end(args);
-}
-
 /* Read PCF font files */
 
 static void pcfUnloadFont ( FontPtr pFont );
@@ -129,12 +117,12 @@ pcfReadTOC(SDL_RWops *file, int *countp)
     count = pcfGetLSB32(file);
     if (IS_EOF(file)) return (PCFTablePtr) NULL;
     if (count < 0 || count > INT32_MAX / sizeof(PCFTableRec)) {
-	pcfError("pcfReadTOC(): invalid file format\n");
+	SDL_SetError("pcfReadTOC(): invalid file format");
 	return NULL;
     }
     tables = mallocarray(count, sizeof(PCFTableRec));
     if (!tables) {
-	pcfError("pcfReadTOC(): Couldn't allocate tables (%d*%d)\n",
+	SDL_SetError("pcfReadTOC(): Couldn't allocate tables (%d*%d)",
 		 count, (int) sizeof(PCFTableRec));
 	return (PCFTablePtr) NULL;
     }
@@ -253,19 +241,19 @@ pcfGetProperties(FontInfoPtr pFontInfo, SDL_RWops *file,
 	goto Bail;
     nprops = pcfGetINT32(file, format);
     if (nprops <= 0 || nprops > INT32_MAX / sizeof(FontPropRec)) {
-	pcfError("pcfGetProperties(): invalid nprops value (%d)\n", nprops);
+	SDL_SetError("pcfGetProperties(): invalid nprops value (%d)", nprops);
 	goto Bail;
     }
     if (IS_EOF(file)) goto Bail;
     props = mallocarray(nprops, sizeof(FontPropRec));
     if (!props) {
-	pcfError("pcfGetProperties(): Couldn't allocate props (%d*%d)\n",
+	SDL_SetError("pcfGetProperties(): Couldn't allocate props (%d*%d)",
 	       nprops, (int) sizeof(FontPropRec));
 	goto Bail;
     }
     isStringProp = mallocarray(nprops, sizeof(char));
     if (!isStringProp) {
-	pcfError("pcfGetProperties(): Couldn't allocate isStringProp (%d*%d)\n",
+	SDL_SetError("pcfGetProperties(): Couldn't allocate isStringProp (%d*%d)",
 	       nprops, (int) sizeof(char));
 	goto Bail;
     }
@@ -276,7 +264,7 @@ pcfGetProperties(FontInfoPtr pFontInfo, SDL_RWops *file,
 	if (props[i].name < 0
 	    || (isStringProp[i] != 0 && isStringProp[i] != 1)
 	    || (isStringProp[i] && props[i].value < 0)) {
-	    pcfError("pcfGetProperties(): invalid file format %ld %d %ld\n",
+	    SDL_SetError("pcfGetProperties(): invalid file format %ld %d %ld",
 		     props[i].name, isStringProp[i], props[i].value);
 	    goto Bail;
 	}
@@ -299,7 +287,7 @@ pcfGetProperties(FontInfoPtr pFontInfo, SDL_RWops *file,
     if (IS_EOF(file)) goto Bail;
     strings = malloc(string_size);
     if (!strings) {
-      pcfError("pcfGetProperties(): Couldn't allocate strings (%d)\n", string_size);
+      SDL_SetError("pcfGetProperties(): Couldn't allocate strings (%d)", string_size);
 	goto Bail;
     }
     SDL_RWread(file, strings, string_size, 1);
@@ -307,7 +295,7 @@ pcfGetProperties(FontInfoPtr pFontInfo, SDL_RWops *file,
     position += string_size;
     for (i = 0; i < nprops; i++) {
 	if (props[i].name >= string_size) {
-	    pcfError("pcfGetProperties(): String starts out of bounds (%ld/%d)\n", props[i].name, string_size);
+	    SDL_SetError("pcfGetProperties(): String starts out of bounds (%ld/%d)", props[i].name, string_size);
 	    goto Bail;
 	}
 /*	props[i].name = MakeAtom(strings + props[i].name,
@@ -316,7 +304,7 @@ pcfGetProperties(FontInfoPtr pFontInfo, SDL_RWops *file,
 
 	if (isStringProp[i]) {
 	    if (props[i].value >= string_size) {
-		pcfError("pcfGetProperties(): String starts out of bounds (%ld/%d)\n", props[i].value, string_size);
+		SDL_SetError("pcfGetProperties(): String starts out of bounds (%ld/%d)", props[i].value, string_size);
 		goto Bail;
 	    }
         props[i].value = 0L;
@@ -504,12 +492,12 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
     	nmetrics = pcfGetINT16(file, format);
     if (SDL_GzRWEof(file)) goto Bail;
     if (nmetrics < 0 || nmetrics > INT32_MAX / sizeof(CharInfoRec)) {
-        pcfError("pcfReadFont(): invalid file format\n");
+        SDL_SetError("pcfReadFont(): invalid file format");
         goto Bail;
     }
     metrics = mallocarray(nmetrics, sizeof(CharInfoRec));
     if (!metrics) {
-    	pcfError("pcfReadFont(): Couldn't allocate metrics (%d*%d)\n",
+    	SDL_SetError("pcfReadFont(): Couldn't allocate metrics (%d*%d)",
 		 nmetrics, (int) sizeof(CharInfoRec));
     	goto Bail;
     }
@@ -536,7 +524,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
     /* nmetrics is already ok, so nbitmap also is */
     offsets = mallocarray(nbitmaps, sizeof(Uint32));
     if (!offsets) {
-    	pcfError("pcfReadFont(): Couldn't allocate offsets (%d*%d)\n",
+    	SDL_SetError("pcfReadFont(): Couldn't allocate offsets (%d*%d)",
 		 nbitmaps, (int) sizeof(Uint32));
 	    goto Bail;
     }
@@ -579,7 +567,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
     /* guard against completely empty font */
     bitmaps = malloc(sizebitmaps ? sizebitmaps : 1);
     if (!bitmaps) {
-      pcfError("pcfReadFont(): Couldn't allocate bitmaps (%d)\n", sizebitmaps ? sizebitmaps : 1);
+      SDL_SetError("pcfReadFont(): Couldn't allocate bitmaps (%d)", sizebitmaps ? sizebitmaps : 1);
     	goto Bail;
     }
     SDL_RWread(file, bitmaps, sizebitmaps, 1);
@@ -606,7 +594,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
 
     printf("Glyph pad %d from file, param=%d\n",PCF_GLYPH_PAD(format),glyph);
     if (PCF_GLYPH_PAD(format) != glyph) {
-        printf("Glyph repad triggered: Got %d from file, while param=%d\n",PCF_GLYPH_PAD(format),glyph);
+        printf("Glyph repad triggered: Got %d from file, while param=%d",PCF_GLYPH_PAD(format),glyph);
         char       *padbitmaps;
         int         sizepadbitmaps;
         int         old,
@@ -616,7 +604,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
         sizepadbitmaps = bitmapSizes[PCF_SIZE_TO_INDEX(glyph)];
         padbitmaps = malloc(sizepadbitmaps);
         if (!padbitmaps) {
-              pcfError("pcfReadFont(): Couldn't allocate padbitmaps (%d)\n", sizepadbitmaps);
+              SDL_SetError("pcfReadFont(): Couldn't allocate padbitmaps (%d)", sizepadbitmaps);
             goto Bail;
         }
         new = 0;
@@ -657,7 +645,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
         /* nmetrics already checked */
         ink_metrics = mallocarray(nink_metrics, sizeof(xCharInfo));
         if (!ink_metrics) {
-            pcfError("pcfReadFont(): Couldn't allocate ink_metrics (%d*%d)\n",
+            SDL_SetError("pcfReadFont(): Couldn't allocate ink_metrics (%d*%d)",
                      nink_metrics, (int) sizeof(xCharInfo));
             goto Bail;
         }
@@ -694,7 +682,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
 
     encoding = calloc(NUM_SEGMENTS(nencoding), sizeof(CharInfoPtr*));
     if (!encoding) {
-        pcfError("pcfReadFont(): Couldn't allocate encoding (%d*%d)\n",
+        SDL_SetError("pcfReadFont(): Couldn't allocate encoding (%d*%d)",
              nencoding, (int) sizeof(CharInfoPtr));
         goto Bail;
     }
@@ -724,7 +712,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
 
     bitmapFont = malloc(sizeof *bitmapFont);
     if (!bitmapFont) {
-        pcfError("pcfReadFont(): Couldn't allocate bitmapFont (%d)\n",
+        SDL_SetError("pcfReadFont(): Couldn't allocate bitmapFont (%d)",
              (int) sizeof *bitmapFont);
         goto Bail;
     }

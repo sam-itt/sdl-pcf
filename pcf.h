@@ -100,6 +100,5 @@ extern int pcfReadFont ( FontPtr pFont, SDL_RWops *file,
 			 int bit, int byte, int glyph, int scan );
 extern int pcfReadFontInfo ( FontInfoPtr pFontInfo, SDL_RWops *file );
 extern int pcfWriteFont ( FontPtr pFont, SDL_RWops *file );
-extern void pcfError ( const char *, ... );
 
 #endif				/* _PCF_H_ */
