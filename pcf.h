@@ -33,7 +33,6 @@ from The Open Group.
 #ifndef _PCF_H_
 #define _PCF_H_
 
-#include "SDL_rwops.h"
 #include "pcfread.h"
 
 
@@ -46,7 +45,7 @@ typedef struct _PCFTable {
     Uint32      format;
     Uint32      size;
     Uint32      offset;
-}           PCFTableRec, *PCFTablePtr;
+}PCFTableRec, *PCFTablePtr;
 
 #ifndef LSBFirst
 #define LSBFirst    0
@@ -95,10 +94,5 @@ typedef struct _PCFTable {
 #define PCF_SWIDTHS		    (1<<6)
 #define PCF_GLYPH_NAMES		    (1<<7)
 #define PCF_BDF_ACCELERATORS	    (1<<8)
-
-extern int pcfReadFont ( FontPtr pFont, SDL_RWops *file,
-			 int bit, int byte, int glyph, int scan );
-extern int pcfReadFontInfo ( FontInfoPtr pFontInfo, SDL_RWops *file );
-extern int pcfWriteFont ( FontPtr pFont, SDL_RWops *file );
 
 #endif				/* _PCF_H_ */

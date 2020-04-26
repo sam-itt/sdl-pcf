@@ -2,14 +2,23 @@
 #define PCFREAD_H
 
 #include "SDL_stdinc.h"
+#include "SDL_rwops.h"
 
+/* number of encoding entries in one segment */
+#define BITMAP_FONT_SEGMENT_SIZE 128
 
-typedef struct _FontProp {
-    long        name;
-    long        value;      /* assumes ATOM is not larger than INT32 */
-}           FontPropRec;
+#define ACCESSENCODING(enc,i) \
+(enc[(i)/BITMAP_FONT_SEGMENT_SIZE]?\
+(enc[(i)/BITMAP_FONT_SEGMENT_SIZE][(i)%BITMAP_FONT_SEGMENT_SIZE]):\
+0)
+#define ACCESSENCODINGL(enc,i) \
+(enc[(i)/BITMAP_FONT_SEGMENT_SIZE][(i)%BITMAP_FONT_SEGMENT_SIZE])
 
-typedef struct _FontProp *FontPropPtr;
+#define SEGMENT_MAJOR(n) ((n)/BITMAP_FONT_SEGMENT_SIZE)
+#define SEGMENT_MINOR(n) ((n)%BITMAP_FONT_SEGMENT_SIZE)
+
+#define NUM_SEGMENTS(n) \
+  (((n)+BITMAP_FONT_SEGMENT_SIZE-1)/BITMAP_FONT_SEGMENT_SIZE)
 
 
 typedef struct {
@@ -20,6 +29,13 @@ typedef struct {
            descent;
     Uint16 attributes;
 } xCharInfo;
+
+
+typedef struct _FontProp {
+    long        name;
+    long        value;      /* assumes ATOM is not larger than INT32 */
+}FontPropRec;
+typedef struct _FontProp *FontPropPtr;
 
 typedef struct _FontInfo {
     unsigned short firstCol;
@@ -58,38 +74,14 @@ typedef struct _Font {
     char        byte;
     char        glyph;
     char        scan;
-#if 0
-    fsBitmapFormat format;
-    int         (*get_glyphs) (FontPtr         /* font */,
-                   unsigned long   /* count */,
-                   unsigned char * /* chars */,
-                   FontEncoding    /* encoding */,
-                   unsigned long * /* count */,
-                   CharInfoPtr *   /* glyphs */);
-    int         (*get_metrics) (FontPtr         /* font */,
-                unsigned long   /* count */,
-                unsigned char * /* chars */,
-                FontEncoding    /* encoding */,
-                unsigned long * /* count */,
-                xCharInfo **    /* glyphs */);
-    void        (*unload_font) (FontPtr         /* font */);
-    void        (*unload_glyphs) (FontPtr         /* font */);
-//    FontPathElementPtr fpe;
-#endif
-    void        *svrPrivate;
     void        *fontPrivate;
-    void        *fpePrivate;
-    int     maxPrivate;
-    void        **devPrivates;
 }FontRec;
 typedef struct _Font *FontPtr;
-
-
 
 typedef struct _CharInfo {
     xCharInfo   metrics;    /* info preformatted for Queries */
     char       *bits;       /* pointer to glyph image */
-}           CharInfoRec;
+}CharInfoRec;
 typedef struct _CharInfo *CharInfoPtr;
 
 typedef struct _BitmapFont {
@@ -101,25 +93,13 @@ typedef struct _BitmapFont {
     char       *bitmaps;    /* base of bitmaps, useful only to free */
     CharInfoPtr **encoding; /* array of arrays of char info pointers */
     CharInfoPtr pDefault;   /* default character */
-//    BitmapExtraPtr bitmapExtra; /* stuff not used by X server */
-}           BitmapFontRec, *BitmapFontPtr;
+}BitmapFontRec, *BitmapFontPtr;
 
 
-/* number of encoding entries in one segment */
-#define BITMAP_FONT_SEGMENT_SIZE 128
 
-#define ACCESSENCODING(enc,i) \
-(enc[(i)/BITMAP_FONT_SEGMENT_SIZE]?\
-(enc[(i)/BITMAP_FONT_SEGMENT_SIZE][(i)%BITMAP_FONT_SEGMENT_SIZE]):\
-0)
-#define ACCESSENCODINGL(enc,i) \
-(enc[(i)/BITMAP_FONT_SEGMENT_SIZE][(i)%BITMAP_FONT_SEGMENT_SIZE])
-
-#define SEGMENT_MAJOR(n) ((n)/BITMAP_FONT_SEGMENT_SIZE)
-#define SEGMENT_MINOR(n) ((n)%BITMAP_FONT_SEGMENT_SIZE)
-
-#define NUM_SEGMENTS(n) \
-  (((n)+BITMAP_FONT_SEGMENT_SIZE-1)/BITMAP_FONT_SEGMENT_SIZE)
+extern int pcfReadFont ( FontPtr pFont, SDL_RWops *file,
+			 int bit, int byte, int glyph, int scan );
+extern int pcfReadFontInfo ( FontInfoPtr pFontInfo, SDL_RWops *file );
 
 
 #endif /* PCFREAD_H */
