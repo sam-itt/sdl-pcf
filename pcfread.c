@@ -30,14 +30,9 @@ from The Open Group.
  * Author:  Keith Packard, MIT X Consortium
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#ifndef MAX
-#define   MAX(a,b)    (((a)>(b)) ? a : b)
-#endif
-
+/*
+ * Adapted for SDL_bdf by Samuel Cuella, 2020
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -45,9 +40,10 @@ from The Open Group.
 #include <stdbool.h>
 #include <string.h>
 
+#include "SDL_rwops.h"
 #include "pcf.h"
 #include "pcfread.h"
-#include "fntfilio.h"
+#include "SDL_GzRW.h"
 
 #define GLYPHPADOPTIONS 4
 #define NO_SUCH_CHAR	-1
@@ -55,6 +51,18 @@ from The Open Group.
 #define AllocError      80
 
 #define mallocarray(n, s)	reallocarray(NULL, n, s)
+
+#ifndef MAX
+#define   MAX(a,b)    (((a)>(b)) ? a : b)
+#endif
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
+
 
 void
 pcfError(const char* message, ...)
@@ -74,63 +82,40 @@ static void pcfUnloadFont ( FontPtr pFont );
 static int  position;
 
 
-#define IS_EOF(file) ((file)->eof == BUFFILEEOF)
+#define IS_EOF(file) (SDL_GzRWEof((file)) == 1)
 
-#define FONT_FILE_GETC_ERR(f)  (tmp = FontFileGetc(f), BAIL_ON_EOF)
-
-static int
-pcfGetLSB32(FontFilePtr file)
+static Uint32 pcfGetLSB32(SDL_RWops *file)
 {
-    int         c;
-
-    c = FontFileGetc(file);
-    c |= FontFileGetc(file) << 8;
-    c |= FontFileGetc(file) << 16;
-    c |= FontFileGetc(file) << 24;
     position += 4;
-    return c;
+    return SDL_ReadLE32(file);
 }
 
-static int
-pcfGetINT32(FontFilePtr file, CARD32 format)
+static Uint32
+pcfGetINT32(SDL_RWops *file, Uint32 format)
 {
-    int         c;
-
-    if (PCF_BYTE_ORDER(format) == MSBFirst) {
-	c = FontFileGetc(file) << 24;
-	c |= FontFileGetc(file) << 16;
-	c |= FontFileGetc(file) << 8;
-	c |= FontFileGetc(file);
-    } else {
-	c = FontFileGetc(file);
-	c |= FontFileGetc(file) << 8;
-	c |= FontFileGetc(file) << 16;
-	c |= FontFileGetc(file) << 24;
-    }
     position += 4;
-    return c;
+    if (PCF_BYTE_ORDER(format) == MSBFirst)  /*Data is Big endian*/
+        return SDL_ReadBE32(file);
+    return SDL_ReadLE32(file);
 }
 
-static int
-pcfGetINT16(FontFilePtr file, CARD32 format)
+static Uint16
+pcfGetINT16(SDL_RWops *file, Uint32 format)
 {
-    int         c;
-
-    if (PCF_BYTE_ORDER(format) == MSBFirst) {
-	c = FontFileGetc(file) << 8;
-	c |= FontFileGetc(file);
-    } else {
-	c = FontFileGetc(file);
-	c |= FontFileGetc(file) << 8;
-    }
     position += 2;
-    return c;
+    if (PCF_BYTE_ORDER(format) == MSBFirst)
+        return SDL_ReadBE16(file);
+    return SDL_ReadLE16(file);
 }
 
-#define pcfGetINT8(file, format) (position++, FontFileGetc(file))
+static Uint8 pcfGetINT8(SDL_RWops *file, Uint32 format)
+{
+    position++;
+    return SDL_ReadU8(file);
+}
 
 static      PCFTablePtr
-pcfReadTOC(FontFilePtr file, int *countp)
+pcfReadTOC(SDL_RWops *file, int *countp)
 {
     CARD32      version;
     PCFTablePtr tables;
@@ -177,7 +162,7 @@ pcfReadTOC(FontFilePtr file, int *countp)
  */
 
 static bool
-pcfGetMetric(FontFilePtr file, CARD32 format, xCharInfo *metric)
+pcfGetMetric(SDL_RWops *file, CARD32 format, xCharInfo *metric)
 {
     metric->leftSideBearing = pcfGetINT16(file, format);
     metric->rightSideBearing = pcfGetINT16(file, format);
@@ -191,7 +176,7 @@ pcfGetMetric(FontFilePtr file, CARD32 format, xCharInfo *metric)
 }
 
 static bool
-pcfGetCompressedMetric(FontFilePtr file, CARD32 format, xCharInfo *metric)
+pcfGetCompressedMetric(SDL_RWops *file, CARD32 format, xCharInfo *metric)
 {
     metric->leftSideBearing = pcfGetINT8(file, format) - 0x80;
     metric->rightSideBearing = pcfGetINT8(file, format) - 0x80;
@@ -209,7 +194,7 @@ pcfGetCompressedMetric(FontFilePtr file, CARD32 format, xCharInfo *metric)
  * in the font file
  */
 static bool
-pcfSeekToType(FontFilePtr file, PCFTablePtr tables, int ntables,
+pcfSeekToType(SDL_RWops *file, PCFTablePtr tables, int ntables,
 	      CARD32 type, CARD32 *formatp, CARD32 *sizep)
 {
     int         i;
@@ -218,7 +203,7 @@ pcfSeekToType(FontFilePtr file, PCFTablePtr tables, int ntables,
 	if (tables[i].type == type) {
 	    if (position > tables[i].offset)
 		return FALSE;
-	    if (!FontFileSkip(file, tables[i].offset - position))
+        if(!SDL_RWseek(file, tables[i].offset - position, RW_SEEK_CUR))
 		return FALSE;
 	    position = tables[i].offset;
 	    *sizep = tables[i].size;
@@ -247,7 +232,7 @@ pcfHasType (PCFTablePtr tables, int ntables, CARD32 type)
  */
 
 static bool
-pcfGetProperties(FontInfoPtr pFontInfo, FontFilePtr file,
+pcfGetProperties(FontInfoPtr pFontInfo, SDL_RWops *file,
 		 PCFTablePtr tables, int ntables)
 {
     FontPropPtr props = 0;
@@ -305,7 +290,7 @@ pcfGetProperties(FontInfoPtr pFontInfo, FontFilePtr file,
     if (nprops & 3)
     {
 	i = 4 - (nprops & 3);
-	(void)FontFileSkip(file, i);
+	(void)SDL_RWseek(file, i, RW_SEEK_CUR);
 	position += i;
     }
     if (IS_EOF(file)) goto Bail;
@@ -317,7 +302,7 @@ pcfGetProperties(FontInfoPtr pFontInfo, FontFilePtr file,
       pcfError("pcfGetProperties(): Couldn't allocate strings (%d)\n", string_size);
 	goto Bail;
     }
-    FontFileRead(file, strings, string_size);
+    SDL_RWread(file, strings, string_size, 1);
     if (IS_EOF(file)) goto Bail;
     position += string_size;
     for (i = 0; i < nprops; i++) {
@@ -359,7 +344,7 @@ Bail:
  */
 
 static bool
-pcfGetAccel(FontInfoPtr pFontInfo, FontFilePtr file,
+pcfGetAccel(FontInfoPtr pFontInfo, SDL_RWops *file,
 	    PCFTablePtr tables, int ntables, CARD32 type)
 {
     CARD32      format;
@@ -461,7 +446,7 @@ Bail:
  *
  */
 int
-pcfReadFont(FontPtr pFont, FontFilePtr file,
+pcfReadFont(FontPtr pFont, SDL_RWops *file,
 	    int bit, int byte, int glyph, int scan)
 {
     CARD32      format;
@@ -517,7 +502,7 @@ pcfReadFont(FontPtr pFont, FontFilePtr file,
 	    nmetrics = pcfGetINT32(file, format);
     else
     	nmetrics = pcfGetINT16(file, format);
-    if (IS_EOF(file)) goto Bail;
+    if (SDL_GzRWEof(file)) goto Bail;
     if (nmetrics < 0 || nmetrics > INT32_MAX / sizeof(CharInfoRec)) {
         pcfError("pcfReadFont(): invalid file format\n");
         goto Bail;
@@ -597,7 +582,7 @@ pcfReadFont(FontPtr pFont, FontFilePtr file,
       pcfError("pcfReadFont(): Couldn't allocate bitmaps (%d)\n", sizebitmaps ? sizebitmaps : 1);
     	goto Bail;
     }
-    FontFileRead(file, bitmaps, sizebitmaps);
+    SDL_RWread(file, bitmaps, sizebitmaps, 1);
     if (IS_EOF(file)) goto Bail;
     position += sizebitmaps;
 
@@ -799,7 +784,7 @@ Bail:
 }
 
 int
-pcfReadFontInfo(FontInfoPtr pFontInfo, FontFilePtr file)
+pcfReadFontInfo(FontInfoPtr pFontInfo, SDL_RWops *file)
 {
     PCFTablePtr tables;
     int         ntables;
@@ -850,7 +835,7 @@ pcfReadFontInfo(FontInfoPtr pFontInfo, FontFilePtr file)
 
     pFontInfo->allExist = TRUE;
     while (nencoding--) {
-	if (pcfGetINT16(file, format) == 0xFFFF)
+	if ((Uint16)pcfGetINT16(file, format) == 0xFFFF)
 	    pFontInfo->allExist = FALSE;
 	if (IS_EOF(file)) goto Bail;
     }

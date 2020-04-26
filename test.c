@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "SDL_GzRW.h"
+#include "SDL_rwops.h"
 #include "pcf.h"
-#include "fntfilio.h"
 #include "pcfread.h"
 
 /*Use glyph to avoid collision with C 'char' type*/
@@ -68,7 +69,7 @@ void dump_glpyh(FontRec *font, int c)
 
 int main(int argc, char *argv[])
 {
-    FontFilePtr file;
+    SDL_RWops *file;
     FontRec font;
     BitmapFontRec *bitmapFont;
     CharInfoRec *ci;
@@ -79,7 +80,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    file = FontFileOpen(argv[1]);
+    file = SDL_RWFromGzFile(argv[1], "rb");
     if(!file){
         printf("Couldn't open font %s\n",argv[1]);
         exit(EXIT_FAILURE);
@@ -88,6 +89,8 @@ int main(int argc, char *argv[])
     int glyph = 4;
     int scan = 1;
     pcfReadFont(&font, file, LSBFirst, LSBFirst, glyph, scan);
+    SDL_RWclose(file);
+    SDL_FreeRW(file);
 
     dump_glpyh(&font, 'G');
 
