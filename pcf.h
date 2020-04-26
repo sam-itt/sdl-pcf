@@ -35,7 +35,6 @@ from The Open Group.
 
 #include "SDL_rwops.h"
 #include "pcfread.h"
-typedef unsigned int CARD32;
 
 
 /*
@@ -43,10 +42,10 @@ typedef unsigned int CARD32;
  */
 
 typedef struct _PCFTable {
-    CARD32      type;
-    CARD32      format;
-    CARD32      size;
-    CARD32      offset;
+    Uint32      type;
+    Uint32      format;
+    Uint32      size;
+    Uint32      offset;
 }           PCFTableRec, *PCFTablePtr;
 
 #ifndef LSBFirst

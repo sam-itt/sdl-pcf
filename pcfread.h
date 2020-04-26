@@ -1,11 +1,7 @@
 #ifndef PCFREAD_H
 #define PCFREAD_H
 
-typedef unsigned short CARD16;
-typedef short INT16;
-
-
-
+#include "SDL_stdinc.h"
 
 
 typedef struct _FontProp {
@@ -17,12 +13,12 @@ typedef struct _FontProp *FontPropPtr;
 
 
 typedef struct {
-    INT16 leftSideBearing,
-      rightSideBearing,
-      characterWidth,
-      ascent,
-      descent;
-    CARD16 attributes;
+    Sint16 leftSideBearing,
+           rightSideBearing,
+           characterWidth,
+           ascent,
+           descent;
+    Uint16 attributes;
 } xCharInfo;
 
 typedef struct _FontInfo {

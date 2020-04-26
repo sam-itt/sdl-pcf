@@ -117,7 +117,7 @@ static Uint8 pcfGetINT8(SDL_RWops *file, Uint32 format)
 static      PCFTablePtr
 pcfReadTOC(SDL_RWops *file, int *countp)
 {
-    CARD32      version;
+    Uint32      version;
     PCFTablePtr tables;
     int         count;
     int         i;
@@ -162,7 +162,7 @@ pcfReadTOC(SDL_RWops *file, int *countp)
  */
 
 static bool
-pcfGetMetric(SDL_RWops *file, CARD32 format, xCharInfo *metric)
+pcfGetMetric(SDL_RWops *file, Uint32 format, xCharInfo *metric)
 {
     metric->leftSideBearing = pcfGetINT16(file, format);
     metric->rightSideBearing = pcfGetINT16(file, format);
@@ -176,7 +176,7 @@ pcfGetMetric(SDL_RWops *file, CARD32 format, xCharInfo *metric)
 }
 
 static bool
-pcfGetCompressedMetric(SDL_RWops *file, CARD32 format, xCharInfo *metric)
+pcfGetCompressedMetric(SDL_RWops *file, Uint32 format, xCharInfo *metric)
 {
     metric->leftSideBearing = pcfGetINT8(file, format) - 0x80;
     metric->rightSideBearing = pcfGetINT8(file, format) - 0x80;
@@ -195,7 +195,7 @@ pcfGetCompressedMetric(SDL_RWops *file, CARD32 format, xCharInfo *metric)
  */
 static bool
 pcfSeekToType(SDL_RWops *file, PCFTablePtr tables, int ntables,
-	      CARD32 type, CARD32 *formatp, CARD32 *sizep)
+	      Uint32 type, Uint32 *formatp, Uint32 *sizep)
 {
     int         i;
 
@@ -214,7 +214,7 @@ pcfSeekToType(SDL_RWops *file, PCFTablePtr tables, int ntables,
 }
 
 static bool
-pcfHasType (PCFTablePtr tables, int ntables, CARD32 type)
+pcfHasType (PCFTablePtr tables, int ntables, Uint32 type)
 {
     int         i;
 
@@ -238,9 +238,9 @@ pcfGetProperties(FontInfoPtr pFontInfo, SDL_RWops *file,
     FontPropPtr props = 0;
     int         nprops;
     char       *isStringProp = 0;
-    CARD32      format;
+    Uint32      format;
     int         i;
-    CARD32      size;
+    Uint32      size;
     int         string_size;
     char       *strings;
 
@@ -345,10 +345,10 @@ Bail:
 
 static bool
 pcfGetAccel(FontInfoPtr pFontInfo, SDL_RWops *file,
-	    PCFTablePtr tables, int ntables, CARD32 type)
+	    PCFTablePtr tables, int ntables, Uint32 type)
 {
-    CARD32      format;
-    CARD32	size;
+    Uint32      format;
+    Uint32	size;
 
     if (!pcfSeekToType(file, tables, ntables, type, &format, &size) ||
 	IS_EOF(file))
@@ -449,8 +449,8 @@ int
 pcfReadFont(FontPtr pFont, SDL_RWops *file,
 	    int bit, int byte, int glyph, int scan)
 {
-    CARD32      format;
-    CARD32      size;
+    Uint32      format;
+    Uint32      size;
     BitmapFontPtr  bitmapFont = 0;
     int         i;
     PCFTablePtr tables = 0;
@@ -465,8 +465,8 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
     CharInfoPtr **encoding = 0;
     int         nencoding = 0;
     int         encodingOffset;
-    CARD32      bitmapSizes[GLYPHPADOPTIONS];
-    CARD32     *offsets = 0;
+    Uint32      bitmapSizes[GLYPHPADOPTIONS];
+    Uint32     *offsets = 0;
     bool	hasBDFAccelerators;
 
     pFont->info.nprops = 0;
@@ -534,10 +534,10 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
     if (nbitmaps != nmetrics || IS_EOF(file))
     	goto Bail;
     /* nmetrics is already ok, so nbitmap also is */
-    offsets = mallocarray(nbitmaps, sizeof(CARD32));
+    offsets = mallocarray(nbitmaps, sizeof(Uint32));
     if (!offsets) {
     	pcfError("pcfReadFont(): Couldn't allocate offsets (%d*%d)\n",
-		 nbitmaps, (int) sizeof(CARD32));
+		 nbitmaps, (int) sizeof(Uint32));
 	    goto Bail;
     }
     for (i = 0; i < nbitmaps; i++) {
@@ -788,8 +788,8 @@ pcfReadFontInfo(FontInfoPtr pFontInfo, SDL_RWops *file)
 {
     PCFTablePtr tables;
     int         ntables;
-    CARD32      format;
-    CARD32      size;
+    Uint32      format;
+    Uint32      size;
     int         nencoding;
     bool	hasBDFAccelerators;
 
