@@ -526,31 +526,6 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
     }
 
     sizebitmaps = bitmapSizes[PCF_GLYPH_PAD_INDEX(format)];
-    printf("Each row aligns width to the next number of ");
-    switch(PCF_GLYPH_PAD_INDEX(format)){
-        case 0:
-            printf("byte\n");
-            break;
-        case 1:
-            printf("short\n");
-            break;
-        case 2:
-            printf("int\n");
-            break;
-    }
-    printf("Bits are stored in ");
-    switch((format>>4)&3){
-        case 0:
-            printf("byte\n");
-            break;
-        case 1:
-            printf("short\n");
-            break;
-        case 2:
-            printf("int\n");
-            break;
-    }
-
     /* guard against completely empty font */
     bitmaps = SDL_malloc(sizebitmaps ? sizebitmaps : 1);
     if (!bitmaps) {
@@ -560,9 +535,6 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
     SDL_RWread(file, bitmaps, sizebitmaps, 1);
     if (IS_EOF(file)) goto Bail;
     position += sizebitmaps;
-
-    printf("In file scan units: %d bytes\n", PCF_SCAN_UNIT(format));
-    printf("param scan units: %d bytes\n",scan);
 
     if (PCF_BIT_ORDER(format) != bit)
 	BitOrderInvert((unsigned char *)bitmaps, sizebitmaps);
@@ -578,10 +550,7 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
             break;
         }
     }
-
-    printf("Glyph pad %d from file, param=%d\n",PCF_GLYPH_PAD(format),glyph);
     if (PCF_GLYPH_PAD(format) != glyph) {
-        printf("Glyph repad triggered: Got %d from file, while param=%d",PCF_GLYPH_PAD(format),glyph);
         char       *padbitmaps;
         int         sizepadbitmaps;
         int         old,
