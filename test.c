@@ -63,7 +63,7 @@ int main(int argc, char **argv)
     }
 
     window = SDL_CreateWindow(
-                "hello_sdl2",
+                "SDL_pcf test drive",
                 SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                 SCREEN_WIDTH, SCREEN_HEIGHT,
                 SDL_WINDOW_SHOWN

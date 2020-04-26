@@ -35,6 +35,13 @@ SDL_PcfFont *SDL_PcfFontInit(SDL_PcfFont *self, const char *filename)
     return self;
 }
 
+/**
+ * Opens a PCF font file. Supports both .pcf and .pcf.gz.
+ *
+ * @param filename The file to open
+ * @returns a SDL_PcfFont opaque struct representing the font.
+ * The caller must call SDL_PcfCloseFont when done using the font.
+ */
 SDL_PcfFont *SDL_PcfOpenFont(const char *filename)
 {
     SDL_PcfFont *rv;
@@ -47,6 +54,14 @@ SDL_PcfFont *SDL_PcfOpenFont(const char *filename)
     return rv;
 }
 
+/**
+ * Free resources taken up by a loaded font.
+ * Caller code must always call SDL_PcfCloseFont on all fonts
+ * it allocates. Each SDL_PcfOpenFont must be paired with a
+ * matching SDL_PcfCloseFont.
+ *
+ * @param self The font to free.
+ */
 void SDL_PcfCloseFont(SDL_PcfFont *self)
 {
     pcfUnloadFont(&(self->xfont));
@@ -98,7 +113,24 @@ static PixelLighter SDL_SurfaceGetLighter(SDL_Surface *surface)
     }
 }
 
-
+/**
+ * Writes a character on screen, and advance the location by one char width.
+ * If the surface is too small to fit the char or if the glyph is partly out
+ * of the surface (start writing a 18 pixel wide char 2 pixels before the edge)
+ * only the pixels that can be written will be drawn, resulting in a partly
+ * drawn glyph and the function will return false.
+ *
+ * @param c The ASCII code of the char to write. You can of course use 'a'
+ * instead of 97.
+ * @param font The font to use to write the char. Opened by SDL_PcfOpenFont.
+ * @param color The color of text. Must be in @param destination format (use
+ * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
+ * @param destination The surface to write to.
+ * @param location Where to write on the surface. Can be NULL to write at
+ * 0,0. If not NULL, location will be advanced by the width.
+ * @return True on success(the whole char has been written), false on error/partial
+ * draw. Details of the failure can be retreived with SDL_GetError().
+ */
 bool SDL_PcfWriteChar(int c, SDL_PcfFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
 {
     int w, h;
@@ -135,8 +167,7 @@ bool SDL_PcfWriteChar(int c, SDL_PcfFont *font, Uint32 color, SDL_Surface *desti
         glyph = &bitmapFont->metrics[c];
     }
 
-
-    /*Check if can do with font members*/
+    /*TODO: Check if can do with FontRec struct members*/
     w = glyph->metrics.rightSideBearing - glyph->metrics.leftSideBearing;
     h = glyph->metrics.ascent + glyph->metrics.descent;
 
@@ -144,7 +175,6 @@ bool SDL_PcfWriteChar(int c, SDL_PcfFont *font, Uint32 color, SDL_Surface *desti
     if(location->x >= destination->w || location->y >= destination->h){
         return false;
     }
-
 
     /* FontRec.Glyph is line padding in number of bytes. See pcfReadFont
      * comments for a detailed explaination
@@ -174,7 +204,23 @@ bool SDL_PcfWriteChar(int c, SDL_PcfFont *font, Uint32 color, SDL_Surface *desti
     return rv;
 }
 
-
+/**
+ * Writes a string on screen. This function will try it's best to write
+ * as many chars as possible: If the surface is not wide enough to accomodate
+ * the whole string, it will stop at the very last pixel (and return false).
+ * This function doesn't wrap lines. Use SDL_PcfGetSizeRequest to get needed
+ * space for a given string/font.
+ *
+ * @param str The string to write.
+ * @param font The font to use. Opened by SDL_PcfOpenFont.
+ * @param color The color of text. Must be in @param destination format (use
+ * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
+ * @param destination The surface to write to.
+ * @param location Where to write on the surface. Can be NULL to write at
+ * 0,0. If not NULL, location will be advanced by the width of the string.
+ * @return True on success(the whole string has been written), false on error/partial
+ * draw. Details of the failure can be retreived with SDL_GetError().
+ */
 bool SDL_PcfWrite(const char *str, SDL_PcfFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
 {
     bool rv;
@@ -195,6 +241,18 @@ bool SDL_PcfWrite(const char *str, SDL_PcfFont *font, Uint32 color, SDL_Surface 
     return rv;
 }
 
+/**
+ * Computes space (pixels width*height) needed to draw a string using a given
+ * font. Both @param w and @param h can be NULL depending on which metric you
+ * are interested in. The function won't fail if both are NULL, it'll just be
+ * useless.
+ *
+ * @param str The string whose size you need to know.
+ * @param font The font you want to use to write that string
+ * @param w Pointer to somewhere to place the resulting width. Can be NULL.
+ * @param h Pointer to somewhere to place the resulting height. Can be NULL.
+ *
+ */
 void SDL_PcfGetSizeRequest(const char *str, SDL_PcfFont *font, Uint32 *w, Uint32 *h)
 {
     int len;
@@ -206,7 +264,14 @@ void SDL_PcfGetSizeRequest(const char *str, SDL_PcfFont *font, Uint32 *w, Uint32
         *h = font->xfont.fontPrivate->metrics->metrics.ascent + font->xfont.fontPrivate->metrics->metrics.descent;
 }
 
-/*@param c: ascii code for the char to dump*/
+/**
+ * Dump a char drawing on stdout using on char per pixel, '#' for lit pixels
+ * and '.' for others. Helps with debugging the code. Not public, shoudln't
+ * be very useful for regular users.
+ *
+ * @param font The font to work with.
+ * @param c    The ascii code of the char to dump. Can use 'a' instead of 97.
+ */
 void SDL_PcfDumpGlpyh(SDL_PcfFont *font, int c)
 {
     int w, h;
