@@ -1,3 +1,12 @@
+local-data
+*.txt
+*.pcf
+notes
+*.bdf
+.clangd/
+compile_commands.json
+test-pcf
+
 # Prerequisites
 *.d
 
@@ -42,11 +51,3 @@
 *.idb
 *.pdb
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
