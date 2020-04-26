@@ -28,10 +28,6 @@ in this Software without prior written authorization from The Open Group.
  * Author:  Keith Packard, MIT X Consortium
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 /* Utility functions for reformating font bitmaps */
 
 static const unsigned char _reverse_byte[0x100] = {

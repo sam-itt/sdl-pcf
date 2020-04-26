@@ -40,10 +40,10 @@ from The Open Group.
 #include <stdbool.h>
 #include <string.h>
 
-#include "SDL_rwops.h"
 #include "pcf.h"
 #include "pcfread.h"
 #include "SDL_GzRW.h"
+#include "utilbitmap.h"
 
 #define GLYPHPADOPTIONS 4
 #define NO_SUCH_CHAR	-1

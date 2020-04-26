@@ -105,35 +105,6 @@ typedef struct _BitmapFont {
 }           BitmapFontRec, *BitmapFontPtr;
 
 
-
-extern void
-BitOrderInvert(
-    register unsigned char *,
-    register int
-);
-
-extern void
-TwoByteSwap(
-    register unsigned char *,
-    register int
-);
-
-extern void
-FourByteSwap(
-    register unsigned char *,
-    register int
-);
-
-extern int
-RepadBitmap (
-    char*,
-    char*,
-    unsigned,
-    unsigned,
-    int,
-    int
-);
-
 /* number of encoding entries in one segment */
 #define BITMAP_FONT_SEGMENT_SIZE 128
 
