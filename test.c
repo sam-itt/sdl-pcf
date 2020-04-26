@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
 
     dump_glpyh(&font, 'G');
 
+    pcfUnloadFont(&font);
 	exit(EXIT_SUCCESS);
 }
 

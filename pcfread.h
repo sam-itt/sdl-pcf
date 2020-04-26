@@ -67,16 +67,6 @@ typedef struct _FontInfo {
 }FontInfoRec;
 typedef struct _FontInfo *FontInfoPtr;
 
-typedef struct _Font {
-    int         refcnt;
-    FontInfoRec info;
-    char        bit;
-    char        byte;
-    char        glyph;
-    char        scan;
-    void        *fontPrivate;
-}FontRec;
-typedef struct _Font *FontPtr;
 
 typedef struct _CharInfo {
     xCharInfo   metrics;    /* info preformatted for Queries */
@@ -95,11 +85,22 @@ typedef struct _BitmapFont {
     CharInfoPtr pDefault;   /* default character */
 }BitmapFontRec, *BitmapFontPtr;
 
+typedef struct _Font {
+    int         refcnt;
+    FontInfoRec info;
+    char        bit;
+    char        byte;
+    char        glyph;
+    char        scan;
+    BitmapFontRec        *fontPrivate;
+}FontRec;
+typedef struct _Font *FontPtr;
 
 
 extern int pcfReadFont ( FontPtr pFont, SDL_RWops *file,
-			 int bit, int byte, int glyph, int scan );
+			             int bit, int byte, int glyph, int scan );
 extern int pcfReadFontInfo ( FontInfoPtr pFontInfo, SDL_RWops *file );
+extern void pcfUnloadFont(FontPtr pFont);
 
 
 #endif /* PCFREAD_H */

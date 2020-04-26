@@ -56,7 +56,6 @@ from The Open Group.
 
 /* Read PCF font files */
 
-static void pcfUnloadFont ( FontPtr pFont );
 static int  position;
 
 
@@ -835,13 +834,13 @@ Bail:
     return AllocError;
 }
 
-static void
+void
 pcfUnloadFont(FontPtr pFont)
 {
     BitmapFontPtr  bitmapFont;
     int i,nencoding;
 
-//    bitmapFont = (BitmapFontPtr) pFont->fontPrivate;
+    bitmapFont = pFont->fontPrivate;
     free(bitmapFont->ink_metrics);
     if(bitmapFont->encoding) {
         nencoding = (pFont->info.lastCol - pFont->info.firstCol + 1) *
@@ -855,5 +854,4 @@ pcfUnloadFont(FontPtr pFont)
     free(pFont->info.isStringProp);
     free(pFont->info.props);
     free(bitmapFont);
-//    DestroyFontRec(pFont);
 }
