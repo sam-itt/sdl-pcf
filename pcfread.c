@@ -56,14 +56,6 @@ from The Open Group.
 #define   MAX(a,b)    (((a)>(b)) ? a : b)
 #endif
 
-#ifndef TRUE
-#define TRUE 1
-#endif
-#ifndef FALSE
-#define FALSE 0
-#endif
-
-
 /* Read PCF font files */
 
 static void pcfUnloadFont ( FontPtr pFont );
@@ -158,9 +150,9 @@ pcfGetMetric(SDL_RWops *file, Uint32 format, xCharInfo *metric)
     metric->ascent = pcfGetINT16(file, format);
     metric->descent = pcfGetINT16(file, format);
     metric->attributes = pcfGetINT16(file, format);
-    if (IS_EOF(file)) return FALSE;
+    if (IS_EOF(file)) return false;
 
-    return TRUE;
+    return true;
 }
 
 static bool
@@ -172,9 +164,9 @@ pcfGetCompressedMetric(SDL_RWops *file, Uint32 format, xCharInfo *metric)
     metric->ascent = pcfGetINT8(file, format) - 0x80;
     metric->descent = pcfGetINT8(file, format) - 0x80;
     metric->attributes = 0;
-    if (IS_EOF(file)) return FALSE;
+    if (IS_EOF(file)) return false;
 
-    return TRUE;
+    return true;
 }
 
 /*
@@ -190,15 +182,15 @@ pcfSeekToType(SDL_RWops *file, PCFTablePtr tables, int ntables,
     for (i = 0; i < ntables; i++)
 	if (tables[i].type == type) {
 	    if (position > tables[i].offset)
-		return FALSE;
+		return false;
         if(!SDL_RWseek(file, tables[i].offset - position, RW_SEEK_CUR))
-		return FALSE;
+		return false;
 	    position = tables[i].offset;
 	    *sizep = tables[i].size;
 	    *formatp = tables[i].format;
-	    return TRUE;
+	    return true;
 	}
-    return FALSE;
+    return false;
 }
 
 static bool
@@ -208,8 +200,8 @@ pcfHasType (PCFTablePtr tables, int ntables, Uint32 type)
 
     for (i = 0; i < ntables; i++)
 	if (tables[i].type == type)
-	    return TRUE;
-    return FALSE;
+	    return true;
+    return false;
 }
 
 /*
@@ -299,7 +291,7 @@ pcfGetProperties(FontInfoPtr pFontInfo, SDL_RWops *file,
 	    goto Bail;
 	}
 /*	props[i].name = MakeAtom(strings + props[i].name,
-				 strnlen(strings + props[i].name, string_size - props[i].name), TRUE);*/
+				 strnlen(strings + props[i].name, string_size - props[i].name), true);*/
     props[i].name = 0L;
 
 	if (isStringProp[i]) {
@@ -309,18 +301,18 @@ pcfGetProperties(FontInfoPtr pFontInfo, SDL_RWops *file,
 	    }
         props[i].value = 0L;
 /*	    props[i].value = MakeAtom(strings + props[i].value,
-				      strnlen(strings + props[i].value, string_size - props[i].value), TRUE);*/
+				      strnlen(strings + props[i].value, string_size - props[i].value), true);*/
 	}
     }
     free(strings);
     pFontInfo->isStringProp = isStringProp;
     pFontInfo->props = props;
     pFontInfo->nprops = nprops;
-    return TRUE;
+    return true;
 Bail:
     free(isStringProp);
     free(props);
-    return FALSE;
+    return false;
 }
 
 
@@ -354,8 +346,8 @@ pcfGetAccel(FontInfoPtr pFontInfo, SDL_RWops *file,
     pFontInfo->inkInside = pcfGetINT8(file, format);
     pFontInfo->inkMetrics = pcfGetINT8(file, format);
     pFontInfo->drawDirection = pcfGetINT8(file, format);
-    pFontInfo->anamorphic = FALSE;
-    pFontInfo->cachable = TRUE;
+    pFontInfo->anamorphic = false;
+    pFontInfo->cachable = true;
      /* natural alignment */ pcfGetINT8(file, format);
     pFontInfo->fontAscent = pcfGetINT32(file, format);
     pFontInfo->fontDescent = pcfGetINT32(file, format);
@@ -374,9 +366,9 @@ pcfGetAccel(FontInfoPtr pFontInfo, SDL_RWops *file,
 	pFontInfo->ink_minbounds = pFontInfo->minbounds;
 	pFontInfo->ink_maxbounds = pFontInfo->maxbounds;
     }
-    return TRUE;
+    return true;
 Bail:
-    return FALSE;
+    return false;
 }
 
 /**
@@ -687,12 +679,12 @@ pcfReadFont(FontPtr pFont, SDL_RWops *file,
         goto Bail;
     }
 
-    pFont->info.allExist = TRUE;
+    pFont->info.allExist = true;
     for (i = 0; i < nencoding; i++) {
         encodingOffset = pcfGetINT16(file, format);
         if (IS_EOF(file)) goto Bail;
         if (encodingOffset == 0xFFFF) {
-            pFont->info.allExist = FALSE;
+            pFont->info.allExist = false;
         } else {
             if(!encoding[SEGMENT_MAJOR(i)]) {
                 encoding[SEGMENT_MAJOR(i)]=
@@ -821,10 +813,10 @@ pcfReadFontInfo(FontInfoPtr pFontInfo, SDL_RWops *file)
     nencoding = (pFontInfo->lastCol - pFontInfo->firstCol + 1) *
 	(pFontInfo->lastRow - pFontInfo->firstRow + 1);
 
-    pFontInfo->allExist = TRUE;
+    pFontInfo->allExist = true;
     while (nencoding--) {
 	if ((Uint16)pcfGetINT16(file, format) == 0xFFFF)
-	    pFontInfo->allExist = FALSE;
+	    pFontInfo->allExist = false;
 	if (IS_EOF(file)) goto Bail;
     }
     if (IS_EOF(file)) goto Bail;
