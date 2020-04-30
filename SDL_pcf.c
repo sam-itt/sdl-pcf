@@ -144,6 +144,10 @@ bool SDL_PcfWriteChar(int c, SDL_PcfFont *font, Uint32 color, SDL_Surface *desti
     Uint8 *pixels, *line_start, *xlimit;
     PixelLighter lit_pixel;
     int line_y;
+    rv = true;
+
+    if(c == ' ')
+        goto end;
 
     location = location ? location : &(SDL_Rect){0,0,0,0};
 
@@ -157,7 +161,6 @@ bool SDL_PcfWriteChar(int c, SDL_PcfFont *font, Uint32 color, SDL_Surface *desti
         return false;
     }
 
-    rv = true;
     bitmapFont  = font->xfont.fontPrivate;
     if(c >= bitmapFont->num_chars){
         SDL_SetError("%s: no glyph for char %d, falling back to default glyph", __FUNCTION__, c);
@@ -200,6 +203,8 @@ bool SDL_PcfWriteChar(int c, SDL_PcfFont *font, Uint32 color, SDL_Surface *desti
         }
     }
     SDL_UnlockSurface(destination);
+
+end:
     location->x += font->xfont.fontPrivate->metrics->metrics.characterWidth;
     return rv;
 }
@@ -227,6 +232,11 @@ bool SDL_PcfWrite(const char *str, SDL_PcfFont *font, Uint32 color, SDL_Surface 
     int end;
     SDL_Rect cursor = (SDL_Rect){0, 0, 0 ,0};
 
+    /* ATM this function draws each glpyh individually using SDL_PcfWriteChar.
+     * This could be optimized by drawing on a destination line basis
+     * TODO: Bench and try
+     * */
+
     end = strlen(str);
     if(!location)
         location = &cursor;
@@ -235,7 +245,6 @@ bool SDL_PcfWrite(const char *str, SDL_PcfFont *font, Uint32 color, SDL_Surface 
     for(int i = 0; i < end; i++){
         if(!SDL_PcfWriteChar(str[i], font, color, destination, location))
             rv = false;
-        cursor.x += font->xfont.fontPrivate->metrics->metrics.characterWidth;
     }
 
     return rv;
