@@ -12,28 +12,28 @@
 
 typedef struct{
     FontRec xfont;
-}SDL_PcfFont;
+}PCF_Font;
 
 typedef struct{
     SDL_Surface *raster;
     char *glyphs;
     Uint16 nglyphs;
     xCharInfo   metrics;
-}SDL_PcfStaticFont;
+}PCF_StaticFont;
 
-SDL_PcfFont *SDL_PcfOpenFont(const char *filename);
-void SDL_PcfCloseFont(SDL_PcfFont *self);
-bool SDL_PcfWriteChar(int c, SDL_PcfFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
-bool SDL_PcfWrite(const char *str, SDL_PcfFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
-void SDL_PcfGetSizeRequest(const char *str, SDL_PcfFont *font, Uint32 *w, Uint32 *h);
+PCF_Font *PCF_OpenFont(const char *filename);
+void PCF_CloseFont(PCF_Font *self);
+bool PCF_FontWriteChar(int c, PCF_Font *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
+bool PCF_FontWrite(const char *str, PCF_Font *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
+void PCF_FontGetSizeRequest(const char *str, PCF_Font *font, Uint32 *w, Uint32 *h);
 
-void SDL_PcfDumpGlpyh(SDL_PcfFont *font, int c);
+void PCF_FontDumpGlpyh(PCF_Font *font, int c);
 
 
-SDL_PcfStaticFont *SDL_PcfCreateStaticFont(SDL_PcfFont *font, SDL_Color *color, int nsets, ...);
-void SDL_PcfFreeStaticFont(SDL_PcfStaticFont *self);
-bool SDL_PcfStaticFontWriteChar(SDL_PcfStaticFont *font, int c, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
-bool SDL_PcfStaticFontWrite(const char *str, SDL_PcfStaticFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
-void SDL_PcfStaticFontGetSizeRequest(const char *str, SDL_PcfStaticFont *font, Uint32 *w, Uint32 *h);
+PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int nsets, ...);
+void PCF_FreeStaticFont(PCF_StaticFont *self);
+bool PCF_StaticFontWriteChar(PCF_StaticFont *font, int c, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
+bool PCF_StaticFontWrite(const char *str, PCF_StaticFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
+void PCF_StaticFontGetSizeRequest(const char *str, PCF_StaticFont *font, Uint32 *w, Uint32 *h);
 
 #endif /* SDL_PCF_H */

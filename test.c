@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     SDL_Window* window = NULL;
     SDL_Surface* screenSurface = NULL;
     Uint32 black, white;
-    SDL_PcfFont *font;
+    PCF_Font *font;
     Uint32 msg_w,msg_h;
     bool done;
     int i;
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    font = SDL_PcfOpenFont("ter-x24n.pcf.gz");
+    font = PCF_OpenFont("ter-x24n.pcf.gz");
     if(!font){
         printf("%s\n", SDL_GetError());
         exit(EXIT_FAILURE);
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 
     char *message = "All your bases are belong to us";
     int msglen = strlen(message);
-    SDL_PcfGetSizeRequest(message, font, &msg_w, &msg_h);
+    PCF_FontGetSizeRequest(message, font, &msg_w, &msg_h);
 
     SDL_Rect location = {SCREEN_WIDTH/2 -1, SCREEN_HEIGHT/2 -1,0 ,0};
     location.x -= (msg_w/2 -1);
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
 
         done = handle_events();
         if( j < msglen){
-            SDL_PcfWriteChar(message[j], font, white, screenSurface, &location);
+            PCF_FontWriteChar(message[j], font, white, screenSurface, &location);
             j++;
         }
 
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
         }
         last_ticks = ticks;
     }while(!done);
-    SDL_PcfCloseFont(font);
+    PCF_CloseFont(font);
 
     SDL_DestroyWindow(window);
     SDL_Quit();

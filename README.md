@@ -12,20 +12,20 @@ SDL_pcf lets you make use of thousands of X11 bitmap fonts, including [terminus]
 ----------------------------------------
 Using PCF fonts is as simple as:
 ```C
-SDL_PcfFont *font;
-font = SDL_PcfOpenFont("ter-x24n.pcf.gz");
-SDL_PcfWrite("Hello world !", font, white, screenSurface, &location);
+PCF_Font *font;
+font = PCF_OpenFont("ter-x24n.pcf.gz");
+PCF_FontWrite("Hello world !", font, white, screenSurface, &location);
 ```
 You just need to include 4 source files and 4 headers in your project. No library building script is provided (yet, contributions are welcome).
 
 # Documentation and demo code
 ----------------------------------------
 SDL_pcf currently has 4 public functions:
-- SDL_PcfOpenFont(const char *filename)
-- SDL_PcfCloseFont(SDL_PcfFont *self)
-- SDL_PcfWriteChar
-- SDL_PcfWrite
-- SDL_PcfGetSizeRequest
+- PCF_OpenFont(const char *filename)
+- PCF_CloseFont(PCF_Font *self)
+- PCF_FontWriteChar
+- PCF_FontWrite
+- PCF_FontGetSizeRequest
 
 Names have been chosen to be self explanatory, but documentation is
 also provided as javadoc-like comment blocs before each function in SDL_pcf.c.

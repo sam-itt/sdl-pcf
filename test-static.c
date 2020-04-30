@@ -52,8 +52,8 @@ int main(int argc, char **argv)
     SDL_Window* window = NULL;
     SDL_Surface* screenSurface = NULL;
     Uint32 black, white;
-    SDL_PcfFont *font;
-    SDL_PcfStaticFont *sfont;
+    PCF_Font *font;
+    PCF_StaticFont *sfont;
     Uint32 msg_w,msg_h;
     bool done;
     int i;
@@ -81,18 +81,18 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    font = SDL_PcfOpenFont("ter-x24n.pcf.gz");
+    font = PCF_OpenFont("ter-x24n.pcf.gz");
     if(!font){
         printf("%s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
-    sfont = SDL_PcfCreateStaticFont(
+    sfont = PCF_FontCreateStaticFont(
         font,
         &(SDL_Color){255,255,255,SDL_ALPHA_OPAQUE},
         1,
         PCF_ALPHA
     );
-    SDL_PcfCloseFont(font);
+    PCF_CloseFont(font);
     if(!sfont){
         printf("%s\n", SDL_GetError());
         exit(EXIT_FAILURE);
@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 
     char *message = "All your bases are belong to us";
     int msglen = strlen(message);
-    SDL_PcfStaticFontGetSizeRequest(message, sfont, &msg_w, &msg_h);
+    PCF_StaticFontGetSizeRequest(message, sfont, &msg_w, &msg_h);
 
     SDL_Rect location = {SCREEN_WIDTH/2 -1, SCREEN_HEIGHT/2 -1,0 ,0};
     location.x -= (msg_w/2 -1);
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
 
         done = handle_events();
         if( j < msglen){
-            SDL_PcfStaticFontWriteChar(sfont, message[j], white, screenSurface, &location);
+            PCF_StaticFontWriteChar(sfont, message[j], white, screenSurface, &location);
             j++;
         }
 

@@ -16,7 +16,7 @@ typedef void (*PixelLighter)(Uint8 *ptr, Uint32 color);
 
 
 
-SDL_PcfFont *SDL_PcfFontInit(SDL_PcfFont *self, const char *filename)
+PCF_Font *PCF_FontInit(PCF_Font *self, const char *filename)
 {
     SDL_RWops *stream;
     int glyph = 4; /*see pcfReadFont comments in pcfread.c*/
@@ -42,15 +42,15 @@ SDL_PcfFont *SDL_PcfFontInit(SDL_PcfFont *self, const char *filename)
  * Opens a PCF font file. Supports both .pcf and .pcf.gz.
  *
  * @param filename The file to open
- * @returns a SDL_PcfFont opaque struct representing the font.
- * The caller must call SDL_PcfCloseFont when done using the font.
+ * @returns a PCF_Font opaque struct representing the font.
+ * The caller must call PCF_CloseFont when done using the font.
  */
-SDL_PcfFont *SDL_PcfOpenFont(const char *filename)
+PCF_Font *PCF_OpenFont(const char *filename)
 {
-    SDL_PcfFont *rv;
+    PCF_Font *rv;
 
-    rv = SDL_calloc(1, sizeof(SDL_PcfFont));
-    if(!SDL_PcfFontInit(rv, filename)){
+    rv = SDL_calloc(1, sizeof(PCF_Font));
+    if(!PCF_FontInit(rv, filename)){
         SDL_free(rv);
         return NULL;
     }
@@ -59,13 +59,13 @@ SDL_PcfFont *SDL_PcfOpenFont(const char *filename)
 
 /**
  * Free resources taken up by a loaded font.
- * Caller code must always call SDL_PcfCloseFont on all fonts
- * it allocates. Each SDL_PcfOpenFont must be paired with a
- * matching SDL_PcfCloseFont.
+ * Caller code must always call PCF_CloseFont on all fonts
+ * it allocates. Each PCF_OpenFont must be paired with a
+ * matching PCF_CloseFont.
  *
  * @param self The font to free.
  */
-void SDL_PcfCloseFont(SDL_PcfFont *self)
+void PCF_CloseFont(PCF_Font *self)
 {
     pcfUnloadFont(&(self->xfont));
     SDL_free(self);
@@ -125,7 +125,7 @@ static PixelLighter SDL_SurfaceGetLighter(SDL_Surface *surface)
  *
  * @param c The ASCII code of the char to write. You can of course use 'a'
  * instead of 97.
- * @param font The font to use to write the char. Opened by SDL_PcfOpenFont.
+ * @param font The font to use to write the char. Opened by PCF_OpenFont.
  * @param color The color of text. Must be in @param destination format (use
  * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
  * @param destination The surface to write to.
@@ -134,7 +134,7 @@ static PixelLighter SDL_SurfaceGetLighter(SDL_Surface *surface)
  * @return True on success(the whole char has been written), false on error/partial
  * draw. Details of the failure can be retreived with SDL_GetError().
  */
-bool SDL_PcfWriteChar(int c, SDL_PcfFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+bool PCF_FontWriteChar(int c, PCF_Font *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
 {
     int w, h;
     int line_bsize;
@@ -216,11 +216,11 @@ end:
  * Writes a string on screen. This function will try it's best to write
  * as many chars as possible: If the surface is not wide enough to accomodate
  * the whole string, it will stop at the very last pixel (and return false).
- * This function doesn't wrap lines. Use SDL_PcfGetSizeRequest to get needed
+ * This function doesn't wrap lines. Use PCF_FontGetSizeRequest to get needed
  * space for a given string/font.
  *
  * @param str The string to write.
- * @param font The font to use. Opened by SDL_PcfOpenFont.
+ * @param font The font to use. Opened by PCF_OpenFont.
  * @param color The color of text. Must be in @param destination format (use
  * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
  * @param destination The surface to write to.
@@ -229,13 +229,13 @@ end:
  * @return True on success(the whole string has been written), false on error/partial
  * draw. Details of the failure can be retreived with SDL_GetError().
  */
-bool SDL_PcfWrite(const char *str, SDL_PcfFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+bool PCF_FontWrite(const char *str, PCF_Font *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
 {
     bool rv;
     int end;
     SDL_Rect cursor = (SDL_Rect){0, 0, 0 ,0};
 
-    /* ATM this function draws each glpyh individually using SDL_PcfWriteChar.
+    /* ATM this function draws each glpyh individually using PCF_FontWriteChar.
      * This could be optimized by drawing on a destination line basis
      * TODO: Bench and try
      * */
@@ -246,7 +246,7 @@ bool SDL_PcfWrite(const char *str, SDL_PcfFont *font, Uint32 color, SDL_Surface 
 
     rv = true;
     for(int i = 0; i < end; i++){
-        if(!SDL_PcfWriteChar(str[i], font, color, destination, location))
+        if(!PCF_FontWriteChar(str[i], font, color, destination, location))
             rv = false;
     }
 
@@ -265,7 +265,7 @@ bool SDL_PcfWrite(const char *str, SDL_PcfFont *font, Uint32 color, SDL_Surface 
  * @param h Pointer to somewhere to place the resulting height. Can be NULL.
  *
  */
-void SDL_PcfGetSizeRequest(const char *str, SDL_PcfFont *font, Uint32 *w, Uint32 *h)
+void PCF_FontGetSizeRequest(const char *str, PCF_Font *font, Uint32 *w, Uint32 *h)
 {
     int len;
 
@@ -284,7 +284,7 @@ void SDL_PcfGetSizeRequest(const char *str, SDL_PcfFont *font, Uint32 *w, Uint32
  * @param font The font to work with.
  * @param c    The ascii code of the char to dump. Can use 'a' instead of 97.
  */
-void SDL_PcfDumpGlpyh(SDL_PcfFont *font, int c)
+void PCF_FontDumpGlpyh(PCF_Font *font, int c)
 {
     int w, h;
     int line_bsize;
@@ -343,11 +343,11 @@ void SDL_PcfDumpGlpyh(SDL_PcfFont *font, int c)
 /**
  * Creates and return a pre-drawn set of characters.
  * The font can be closed afterwards. The return value must be freed by the
- * caller using SDL_PcfFreeStaticFont().
+ * caller using PCF_FreeStaticFont().
  *
  * Once drawn, static fonts are immutable: You can't add characters on the fly,
  * or change colors. You'll need to create a new static font to do that. The
- * purpose of SDL_PcfStaticFont is to integrate with rendering systems based on
+ * purpose of PCF_StaticFont is to integrate with rendering systems based on
  * fixed bitmap data + coordinates, like SDL_Renderer or OpenGL.
  *
  * @param font  The font to draw with
@@ -356,21 +356,21 @@ void SDL_PcfDumpGlpyh(SDL_PcfFont *font, int c)
  * @param ...   Sets of glyphs to include in the cache, as const char*. You can
  * use pre-defined sets such as PCF_ALPHA, PCF_DIGIT, etc. WARNING: The function
  * doesn't check for duplicates characters.
- * @returns a newly allocated SDL_PcfStaticFont or NULL on error. The error will be
+ * @returns a newly allocated PCF_StaticFont or NULL on error. The error will be
  * available with SDL_GetError()
  *
  */
-SDL_PcfStaticFont *SDL_PcfCreateStaticFont(SDL_PcfFont *font, SDL_Color *color, int nsets, ...)
+PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int nsets, ...)
 {
     Uint32 w,h;
-    SDL_PcfStaticFont *rv;
+    PCF_StaticFont *rv;
     va_list ap;
     const char *tmp;
     char *iter;
 
-    rv = SDL_calloc(1, sizeof(SDL_PcfStaticFont));
+    rv = SDL_calloc(1, sizeof(PCF_StaticFont));
     if(!rv){
-        SDL_SetError("Couldn't allocate memory for new SDL_PcfStaticFont\n");
+        SDL_SetError("Couldn't allocate memory for new PCF_StaticFont\n");
         return NULL;
     }
 
@@ -391,14 +391,14 @@ SDL_PcfStaticFont *SDL_PcfCreateStaticFont(SDL_PcfFont *font, SDL_Color *color, 
     }
     va_end(ap);
 
-    SDL_PcfGetSizeRequest(rv->glyphs, font, &w, &h);
+    PCF_FontGetSizeRequest(rv->glyphs, font, &w, &h);
     /*Creates a 32bit surface by default which might be overkill*/
     rv->raster = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
     rv->nglyphs = strlen(rv->glyphs);
     qsort(rv->glyphs, rv->nglyphs, sizeof(char), (__compar_fn_t) strcmp);
 
     rv->metrics = font->xfont.fontPrivate->metrics->metrics;
-    SDL_PcfWrite(
+    PCF_FontWrite(
         rv->glyphs, font,
         SDL_MapRGBA(rv->raster->format, color->r, color->g, color->b, color->a),
         rv->raster, NULL
@@ -409,11 +409,11 @@ SDL_PcfStaticFont *SDL_PcfCreateStaticFont(SDL_PcfFont *font, SDL_Color *color, 
 
 /**
  * Frees memory used by a static font. Each static font created using
- * SDL_PcfCreateStaticFont should be released using this function.
+ * PCF_FontCreateStaticFont should be released using this function.
  *
- * @param self The SDL_PcfStaticFont to free.
+ * @param self The PCF_StaticFont to free.
  */
-void SDL_PcfFreeStaticFont(SDL_PcfStaticFont *self)
+void PCF_FreeStaticFont(PCF_StaticFont *self)
 {
     SDL_free(self->glyphs);
     SDL_FreeSurface(self->raster);
@@ -427,7 +427,7 @@ void SDL_PcfFreeStaticFont(SDL_PcfStaticFont *self)
  * only the pixels that can be written will be drawn, resulting in a partly
  * drawn glyph and the function will return false.
  *
- * @param font The font to use. Created by SDL_PcfCreateStaticFont.
+ * @param font The font to use. Created by PCF_FontCreateStaticFont.
  * @param c The ASCII code of the char to write. You can of course use 'a'
  * instead of 97.
  * @param color The color of text. Must be in @param destination format (use
@@ -438,7 +438,7 @@ void SDL_PcfFreeStaticFont(SDL_PcfStaticFont *self)
  * @return True on success(the whole char has been written), false on error/partial
  * draw. Details of the failure can be retreived with SDL_GetError().
  */
-bool SDL_PcfStaticFontWriteChar(SDL_PcfStaticFont *font, int c, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+bool PCF_StaticFontWriteChar(PCF_StaticFont *font, int c, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
 {
     int i;
     SDL_Rect glyph;
@@ -477,7 +477,7 @@ end:
  * will behave just like it's "live" font counterpart.
  *
  * @param str The string to write.
- * @param font The font to use. Created by SDL_PcfCreateStaticFont.
+ * @param font The font to use. Created by PCF_FontCreateStaticFont.
  * @param color The color of text. Must be in @param destination format (use
  * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
  * @param destination The surface to write to.
@@ -486,13 +486,13 @@ end:
  * @return True on success(the whole string has been written), false on error/partial
  * draw. Details of the failure can be retreived with SDL_GetError().
  */
-bool SDL_PcfStaticFontWrite(const char *str, SDL_PcfStaticFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+bool PCF_StaticFontWrite(const char *str, PCF_StaticFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
 {
     bool rv;
     int end;
     SDL_Rect cursor = (SDL_Rect){0, 0, 0 ,0};
 
-    /* ATM this function draws each glpyh individually using SDL_PcfWriteChar.
+    /* ATM this function draws each glpyh individually using PCF_FontWriteChar.
      * This could be optimized by drawing on a destination line basis
      * TODO: Bench and try
      * */
@@ -503,7 +503,7 @@ bool SDL_PcfStaticFontWrite(const char *str, SDL_PcfStaticFont *font, Uint32 col
 
     rv = true;
     for(int i = 0; i < end; i++){
-        if(SDL_PcfStaticFontWriteChar(font, str[i], color, destination, location))
+        if(PCF_StaticFontWriteChar(font, str[i], color, destination, location))
             rv = false;
         cursor.x += font->metrics.characterWidth;
     }
@@ -523,7 +523,7 @@ bool SDL_PcfStaticFontWrite(const char *str, SDL_PcfStaticFont *font, Uint32 col
  * @param h Pointer to somewhere to place the resulting height. Can be NULL.
  *
  */
-void SDL_PcfStaticFontGetSizeRequest(const char *str, SDL_PcfStaticFont *font, Uint32 *w, Uint32 *h)
+void PCF_StaticFontGetSizeRequest(const char *str, PCF_StaticFont *font, Uint32 *w, Uint32 *h)
 {
     int len;
 
