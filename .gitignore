@@ -6,6 +6,8 @@ notes
 .clangd/
 compile_commands.json
 test-pcf
+test-static
+
 
 # Prerequisites
 *.d

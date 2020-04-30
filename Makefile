@@ -3,13 +3,15 @@ SRCDIR=.
 CC=gcc
 CFLAGS=-g3 -O0 `pkg-config sdl2 --cflags` -I$(SRCDIR)
 LDFLAGS=-lz -lm `pkg-config sdl2 --libs` -Wl,--as-needed
-EXEC=test-pcf
-SRC= $(wildcard $(SRCDIR)/*.c)
+SRC= $(filter-out $(SRCDIR)/test.c $(SRCDIR)/test-static.c, $(wildcard $(SRCDIR)/*.c))
 OBJ= $(SRC:.c=.o)
 
-all: $(EXEC)
+all: test-pcf test-static
 
-$(EXEC): $(OBJ)
+test-pcf: $(OBJ) test.o
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+test-static: $(OBJ) test-static.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c

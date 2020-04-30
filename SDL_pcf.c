@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
+#include "SDL_error.h"
+#include "SDL_pixels.h"
 #include "pcf.h"
 #include "pcfread.h"
 #include "SDL_pcf.h"
@@ -334,5 +337,200 @@ void SDL_PcfDumpGlpyh(SDL_PcfFont *font, int c)
         printf("\n");
     }
     printf("\n");
+}
+
+
+/**
+ * Creates and return a pre-drawn set of characters.
+ * The font can be closed afterwards. The return value must be freed by the
+ * caller using SDL_PcfFreeStaticFont().
+ *
+ * Once drawn, static fonts are immutable: You can't add characters on the fly,
+ * or change colors. You'll need to create a new static font to do that. The
+ * purpose of SDL_PcfStaticFont is to integrate with rendering systems based on
+ * fixed bitmap data + coordinates, like SDL_Renderer or OpenGL.
+ *
+ * @param font  The font to draw with
+ * @param color The color of the pre-rendered glyphs
+ * @param nsets The number of glyph sets that follows
+ * @param ...   Sets of glyphs to include in the cache, as const char*. You can
+ * use pre-defined sets such as PCF_ALPHA, PCF_DIGIT, etc. WARNING: The function
+ * doesn't check for duplicates characters.
+ * @returns a newly allocated SDL_PcfStaticFont or NULL on error. The error will be
+ * available with SDL_GetError()
+ *
+ */
+SDL_PcfStaticFont *SDL_PcfCreateStaticFont(SDL_PcfFont *font, SDL_Color *color, int nsets, ...)
+{
+    Uint32 w,h;
+    SDL_PcfStaticFont *rv;
+    va_list ap;
+    const char *tmp;
+    char *iter;
+
+    rv = SDL_calloc(1, sizeof(SDL_PcfStaticFont));
+    if(!rv){
+        SDL_SetError("Couldn't allocate memory for new SDL_PcfStaticFont\n");
+        return NULL;
+    }
+
+    va_start(ap, nsets);
+    for(int i = 0; i < nsets; i++){
+        tmp = va_arg(ap, const char*);
+        rv->nglyphs += strlen(tmp);
+    }
+    va_end(ap);
+
+    rv->glyphs = SDL_calloc(rv->nglyphs + 1, sizeof(char));
+    iter = rv->glyphs;
+    va_start(ap, nsets);
+    for(int i = 0; i < nsets; i++){
+        tmp = va_arg(ap, const char*);
+        strcpy(iter, tmp);
+        iter += strlen(tmp);
+    }
+    va_end(ap);
+
+    SDL_PcfGetSizeRequest(rv->glyphs, font, &w, &h);
+    /*Creates a 32bit surface by default which might be overkill*/
+    rv->raster = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
+    rv->nglyphs = strlen(rv->glyphs);
+    qsort(rv->glyphs, rv->nglyphs, sizeof(char), (__compar_fn_t) strcmp);
+
+    rv->metrics = font->xfont.fontPrivate->metrics->metrics;
+    SDL_PcfWrite(
+        rv->glyphs, font,
+        SDL_MapRGBA(rv->raster->format, color->r, color->g, color->b, color->a),
+        rv->raster, NULL
+    );
+
+    return rv;
+}
+
+/**
+ * Frees memory used by a static font. Each static font created using
+ * SDL_PcfCreateStaticFont should be released using this function.
+ *
+ * @param self The SDL_PcfStaticFont to free.
+ */
+void SDL_PcfFreeStaticFont(SDL_PcfStaticFont *self)
+{
+    SDL_free(self->glyphs);
+    SDL_FreeSurface(self->raster);
+    SDL_free(self);
+}
+
+/**
+ * Writes a character on screen, using a pre-rendered font.
+ * If the surface is too small to fit the char or if the glyph is partly out
+ * of the surface (start writing a 18 pixel wide char 2 pixels before the edge)
+ * only the pixels that can be written will be drawn, resulting in a partly
+ * drawn glyph and the function will return false.
+ *
+ * @param font The font to use. Created by SDL_PcfCreateStaticFont.
+ * @param c The ASCII code of the char to write. You can of course use 'a'
+ * instead of 97.
+ * @param color The color of text. Must be in @param destination format (use
+ * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
+ * @param destination The surface to write to.
+ * @param location Where to write on the surface. Can be NULL to write at
+ * 0,0. If not NULL, location will be advanced by the width.
+ * @return True on success(the whole char has been written), false on error/partial
+ * draw. Details of the failure can be retreived with SDL_GetError().
+ */
+bool SDL_PcfStaticFontWriteChar(SDL_PcfStaticFont *font, int c, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+{
+    int i;
+    SDL_Rect glyph;
+
+    if(c == ' ')
+        goto end;
+
+    location = location ? location : &(SDL_Rect){0,0,0,0};
+
+    for(i = 0; i < font->nglyphs; i++){
+        if(font->glyphs[i] == c)
+            break;
+    }
+
+    if(i == font->nglyphs)
+        return SDL_SetError("%s: %c: glpyh not found in font %p",__FUNCTION__, c, font) > 0;
+
+    /*The raster is a single glpyh height: All glyphs
+     * begin at 0,0 and end at raster->h-1 (height-wise)*/
+    glyph.y = 0;
+    /* First char(0) goes(x-wise) from 0 to width-1. Next char
+     * starts at width, ends at width+width-1, etc.*/
+    glyph.x = i * font->metrics.characterWidth;
+    glyph.h = font->raster->h;
+    glyph.w = font->metrics.characterWidth;
+
+    SDL_BlitSurface(font->raster, &glyph, destination, location);
+
+end:
+    location->x += font->metrics.characterWidth;
+    return true;
+}
+
+/**
+ * Writes a string on screen, using pre-rendered static font. This function
+ * will behave just like it's "live" font counterpart.
+ *
+ * @param str The string to write.
+ * @param font The font to use. Created by SDL_PcfCreateStaticFont.
+ * @param color The color of text. Must be in @param destination format (use
+ * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
+ * @param destination The surface to write to.
+ * @param location Where to write on the surface. Can be NULL to write at
+ * 0,0. If not NULL, location will be advanced by the width of the string.
+ * @return True on success(the whole string has been written), false on error/partial
+ * draw. Details of the failure can be retreived with SDL_GetError().
+ */
+bool SDL_PcfStaticFontWrite(const char *str, SDL_PcfStaticFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+{
+    bool rv;
+    int end;
+    SDL_Rect cursor = (SDL_Rect){0, 0, 0 ,0};
+
+    /* ATM this function draws each glpyh individually using SDL_PcfWriteChar.
+     * This could be optimized by drawing on a destination line basis
+     * TODO: Bench and try
+     * */
+
+    end = strlen(str);
+    if(!location)
+        location = &cursor;
+
+    rv = true;
+    for(int i = 0; i < end; i++){
+        if(SDL_PcfStaticFontWriteChar(font, str[i], color, destination, location))
+            rv = false;
+        cursor.x += font->metrics.characterWidth;
+    }
+
+    return rv;
+}
+
+/**
+ * Computes space (pixels width*height) needed to draw a string using a given
+ * font. Both @param w and @param h can be NULL depending on which metric you
+ * are interested in. The function won't fail if both are NULL, it'll just be
+ * useless.
+ *
+ * @param str The string whose size you need to know.
+ * @param font The font you want to use to write that string
+ * @param w Pointer to somewhere to place the resulting width. Can be NULL.
+ * @param h Pointer to somewhere to place the resulting height. Can be NULL.
+ *
+ */
+void SDL_PcfStaticFontGetSizeRequest(const char *str, SDL_PcfStaticFont *font, Uint32 *w, Uint32 *h)
+{
+    int len;
+
+    len = strlen(str);
+    if(w)
+        *w = font->metrics.characterWidth * len;
+    if(h)
+        *h = font->metrics.ascent + font->metrics.descent;
 }
 
