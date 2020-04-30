@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 
     char *message = "All your bases are belong to us";
     int msglen = strlen(message);
-    PCF_StaticFontGetSizeRequest(message, sfont, &msg_w, &msg_h);
+    PCF_StaticFontGetSizeRequest(sfont, message, &msg_w, &msg_h);
 
     SDL_Rect location = {SCREEN_WIDTH/2 -1, SCREEN_HEIGHT/2 -1,0 ,0};
     location.x -= (msg_w/2 -1);

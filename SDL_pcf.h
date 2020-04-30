@@ -23,17 +23,15 @@ typedef struct{
 
 PCF_Font *PCF_OpenFont(const char *filename);
 void PCF_CloseFont(PCF_Font *self);
-bool PCF_FontWriteChar(int c, PCF_Font *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
-bool PCF_FontWrite(const char *str, PCF_Font *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
-void PCF_FontGetSizeRequest(const char *str, PCF_Font *font, Uint32 *w, Uint32 *h);
-
-void PCF_FontDumpGlpyh(PCF_Font *font, int c);
-
+bool PCF_FontWriteChar(PCF_Font *font, int c, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
+bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
+void PCF_FontGetSizeRequest(PCF_Font *font, const char *str, Uint32 *w, Uint32 *h);
 
 PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int nsets, ...);
 void PCF_FreeStaticFont(PCF_StaticFont *self);
 bool PCF_StaticFontWriteChar(PCF_StaticFont *font, int c, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
-bool PCF_StaticFontWrite(const char *str, PCF_StaticFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
-void PCF_StaticFontGetSizeRequest(const char *str, PCF_StaticFont *font, Uint32 *w, Uint32 *h);
+bool PCF_StaticFontWrite(PCF_StaticFont *font, const char *str, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
+void PCF_StaticFontGetSizeRequest(PCF_StaticFont *font, const char *str, Uint32 *w, Uint32 *h);
 
+void PCF_FontDumpGlpyh(PCF_Font *font, int c);
 #endif /* SDL_PCF_H */

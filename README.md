@@ -14,7 +14,7 @@ Using PCF fonts is as simple as:
 ```C
 PCF_Font *font;
 font = PCF_OpenFont("ter-x24n.pcf.gz");
-PCF_FontWrite("Hello world !", font, white, screenSurface, &location);
+PCF_FontWrite(font, "Hello world !", white, screenSurface, &location);
 ```
 You just need to include 4 source files and 4 headers in your project. No library building script is provided (yet, contributions are welcome).
 

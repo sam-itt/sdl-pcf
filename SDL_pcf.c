@@ -134,7 +134,7 @@ static PixelLighter SDL_SurfaceGetLighter(SDL_Surface *surface)
  * @return True on success(the whole char has been written), false on error/partial
  * draw. Details of the failure can be retreived with SDL_GetError().
  */
-bool PCF_FontWriteChar(int c, PCF_Font *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+bool PCF_FontWriteChar(PCF_Font *font, int c, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
 {
     int w, h;
     int line_bsize;
@@ -229,7 +229,7 @@ end:
  * @return True on success(the whole string has been written), false on error/partial
  * draw. Details of the failure can be retreived with SDL_GetError().
  */
-bool PCF_FontWrite(const char *str, PCF_Font *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
 {
     bool rv;
     int end;
@@ -246,7 +246,7 @@ bool PCF_FontWrite(const char *str, PCF_Font *font, Uint32 color, SDL_Surface *d
 
     rv = true;
     for(int i = 0; i < end; i++){
-        if(!PCF_FontWriteChar(str[i], font, color, destination, location))
+        if(!PCF_FontWriteChar(font, str[i], color, destination, location))
             rv = false;
     }
 
@@ -265,7 +265,7 @@ bool PCF_FontWrite(const char *str, PCF_Font *font, Uint32 color, SDL_Surface *d
  * @param h Pointer to somewhere to place the resulting height. Can be NULL.
  *
  */
-void PCF_FontGetSizeRequest(const char *str, PCF_Font *font, Uint32 *w, Uint32 *h)
+void PCF_FontGetSizeRequest(PCF_Font *font, const char *str, Uint32 *w, Uint32 *h)
 {
     int len;
 
@@ -391,7 +391,7 @@ PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int n
     }
     va_end(ap);
 
-    PCF_FontGetSizeRequest(rv->glyphs, font, &w, &h);
+    PCF_FontGetSizeRequest(font, rv->glyphs, &w, &h);
     /*Creates a 32bit surface by default which might be overkill*/
     rv->raster = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
     rv->nglyphs = strlen(rv->glyphs);
@@ -399,7 +399,7 @@ PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int n
 
     rv->metrics = font->xfont.fontPrivate->metrics->metrics;
     PCF_FontWrite(
-        rv->glyphs, font,
+        font, rv->glyphs,
         SDL_MapRGBA(rv->raster->format, color->r, color->g, color->b, color->a),
         rv->raster, NULL
     );
@@ -486,7 +486,7 @@ end:
  * @return True on success(the whole string has been written), false on error/partial
  * draw. Details of the failure can be retreived with SDL_GetError().
  */
-bool PCF_StaticFontWrite(const char *str, PCF_StaticFont *font, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+bool PCF_StaticFontWrite(PCF_StaticFont *font, const char *str, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
 {
     bool rv;
     int end;
@@ -523,7 +523,7 @@ bool PCF_StaticFontWrite(const char *str, PCF_StaticFont *font, Uint32 color, SD
  * @param h Pointer to somewhere to place the resulting height. Can be NULL.
  *
  */
-void PCF_StaticFontGetSizeRequest(const char *str, PCF_StaticFont *font, Uint32 *w, Uint32 *h)
+void PCF_StaticFontGetSizeRequest(PCF_StaticFont *font, const char *str, Uint32 *w, Uint32 *h)
 {
     int len;
 
