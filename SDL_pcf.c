@@ -417,6 +417,9 @@ void PCF_FreeStaticFont(PCF_StaticFont *self)
 {
     SDL_free(self->glyphs);
     SDL_FreeSurface(self->raster);
+#if HAVE_SDL2
+    SDL_DestroyTexture(self->texture);
+#endif
     SDL_free(self);
 }
 
@@ -480,3 +483,10 @@ void PCF_StaticFontGetSizeRequest(PCF_StaticFont *font, const char *str, Uint32 
         *h = font->metrics.ascent + font->metrics.descent;
 }
 
+#if HAVE_SDL2
+void PCF_StaticFontCreateTexture(PCF_StaticFont *font, SDL_Renderer *renderer)
+{
+    font->texture = SDL_CreateTextureFromSurface(renderer, font->raster);
+    /*TODO: Check if it's appropriate to free the surface*/
+}
+#endif

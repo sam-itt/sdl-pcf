@@ -3,6 +3,7 @@
 #include <stdbool.h>
 
 #include "SDL_surface.h"
+#include "SDL_render.h"
 #include "pcfread.h"
 
 #define PCF_LOWER_CASE "abcdefghijklmnopqrstuvwxyz"
@@ -19,6 +20,9 @@ typedef struct{
     char *glyphs;
     Uint16 nglyphs;
     xCharInfo   metrics;
+#if HAVE_SDL2
+    SDL_Texture *texture;
+#endif
 }PCF_StaticFont;
 
 PCF_Font *PCF_OpenFont(const char *filename);
@@ -31,6 +35,10 @@ PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int n
 void PCF_FreeStaticFont(PCF_StaticFont *self);
 bool PCF_StaticFontGetCharRect(PCF_StaticFont *font, int c, SDL_Rect *glyph);
 void PCF_StaticFontGetSizeRequest(PCF_StaticFont *font, const char *str, Uint32 *w, Uint32 *h);
+#if HAVE_SDL2
+void PCF_StaticFontCreateTexture(PCF_StaticFont *font, SDL_Renderer *renderer);
+#endif
+
 
 void PCF_FontDumpGlpyh(PCF_Font *font, int c);
 #endif /* SDL_PCF_H */
