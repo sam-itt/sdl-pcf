@@ -165,7 +165,7 @@ bool PCF_FontWriteChar(PCF_Font *font, int c, Uint32 color, SDL_Surface *destina
     }
 
     bitmapFont  = font->xfont.fontPrivate;
-    if(c >= bitmapFont->num_chars){
+    if(c >= bitmapFont->num_chars || c < 0){
         SDL_SetError("%s: no glyph for char %d, falling back to default glyph", __FUNCTION__, c);
         glyph = font->xfont.fontPrivate->pDefault;
         rv = false;
@@ -367,6 +367,7 @@ PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int n
     va_list ap;
     const char *tmp;
     char *iter;
+    Uint32 col;
 
     rv = SDL_calloc(1, sizeof(PCF_StaticFont));
     if(!rv){
@@ -392,17 +393,26 @@ PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int n
     va_end(ap);
 
     PCF_FontGetSizeRequest(font, rv->glyphs, &w, &h);
+    /*The static font will hold an implicit default glyph at it's very end*/
+    w += font->xfont.fontPrivate->pDefault->metrics.characterWidth;
     /*Creates a 32bit surface by default which might be overkill*/
     rv->raster = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
+    col =  SDL_MapRGBA(rv->raster->format, color->r, color->g, color->b, color->a);
     rv->nglyphs = strlen(rv->glyphs);
     qsort(rv->glyphs, rv->nglyphs, sizeof(char), (__compar_fn_t) strcmp);
 
     rv->metrics = font->xfont.fontPrivate->metrics->metrics;
     PCF_FontWrite(
         font, rv->glyphs,
-        SDL_MapRGBA(rv->raster->format, color->r, color->g, color->b, color->a),
+        col,
         rv->raster, NULL
     );
+    PCF_FontWriteChar(font, -1, col, rv->raster, &(SDL_Rect){
+        .y = 0,
+        .x = rv->raster->w - font->xfont.fontPrivate->pDefault->metrics.characterWidth, /*double checked: ok*/
+        .w = font->xfont.fontPrivate->pDefault->metrics.characterWidth,
+        .h = font->xfont.fontPrivate->pDefault->metrics.ascent + font->xfont.fontPrivate->pDefault->metrics.descent
+    });
 
     return rv;
 }
@@ -431,22 +441,26 @@ void PCF_FreeStaticFont(PCF_StaticFont *self)
  * @param font The static font to search in.
  * @param c    The char to search for.
  * @param glyph Location where to put the coordinates, when found.
- * @return true if @font has a glyph for c, false otherwise.
+ * @return 0 for whitespace (@glpyh untouched), non-zero if @param font
+ * has something printable for @param c: 1 if the char as been found,
+ * -1 otherwise. When returning -1, glpyh has been set to the default glyph.
  */
-bool PCF_StaticFontGetCharRect(PCF_StaticFont *font, int c, SDL_Rect *glyph)
+int PCF_StaticFontGetCharRect(PCF_StaticFont *font, int c, SDL_Rect *glyph)
 {
     int i;
+    int rv;
 
     if(c == ' ')
-        return false;
+        return 0;
 
+    rv = 1;
     for(i = 0; i < font->nglyphs; i++){
         if(font->glyphs[i] == c)
             break;
     }
 
-    if(i == font->nglyphs) /*TODO: Use the default glyph*/
-        return SDL_SetError("%s: %c: glpyh not found in font %p",__FUNCTION__, c, font) > 0;
+    if(i == font->nglyphs) /*Sets the error, i now points to the implicit default char*/
+        rv = SDL_SetError("%s: %c: glpyh not found in font %p",__FUNCTION__, c, font);
 
     /*The raster is a single glpyh height: All glyphs
      * begin at 0,0 and end at raster->h-1 (height-wise)*/
@@ -457,7 +471,7 @@ bool PCF_StaticFontGetCharRect(PCF_StaticFont *font, int c, SDL_Rect *glyph)
     glyph->h = font->raster->h;
     glyph->w = font->metrics.characterWidth;
 
-    return true;
+    return rv;
 }
 
 /**

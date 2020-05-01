@@ -33,7 +33,7 @@ void PCF_FontGetSizeRequest(PCF_Font *font, const char *str, Uint32 *w, Uint32 *
 
 PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int nsets, ...);
 void PCF_FreeStaticFont(PCF_StaticFont *self);
-bool PCF_StaticFontGetCharRect(PCF_StaticFont *font, int c, SDL_Rect *glyph);
+int PCF_StaticFontGetCharRect(PCF_StaticFont *font, int c, SDL_Rect *glyph);
 void PCF_StaticFontGetSizeRequest(PCF_StaticFont *font, const char *str, Uint32 *w, Uint32 *h);
 #if HAVE_SDL2
 void PCF_StaticFontCreateTexture(PCF_StaticFont *font, SDL_Renderer *renderer);
