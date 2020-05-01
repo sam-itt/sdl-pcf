@@ -32,6 +32,7 @@ bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *d
 void PCF_FontGetSizeRequest(PCF_Font *font, const char *str, Uint32 *w, Uint32 *h);
 
 PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int nsets, ...);
+PCF_StaticFont *PCF_FontCreateStaticFontVA(PCF_Font *font, SDL_Color *color, int nsets, size_t tlen, va_list ap);
 void PCF_FreeStaticFont(PCF_StaticFont *self);
 int PCF_StaticFontGetCharRect(PCF_StaticFont *font, int c, SDL_Rect *glyph);
 void PCF_StaticFontGetSizeRequest(PCF_StaticFont *font, const char *str, Uint32 *w, Uint32 *h);

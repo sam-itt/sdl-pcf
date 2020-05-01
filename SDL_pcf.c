@@ -362,9 +362,45 @@ void PCF_FontDumpGlpyh(PCF_Font *font, int c)
  */
 PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int nsets, ...)
 {
+    va_list ap;
+    char *tmp;
+    size_t tlen;
+    PCF_StaticFont *rv;
+
+    tlen = 0;
+    va_start(ap, nsets);
+    for(int i = 0; i < nsets; i++){
+        tmp = va_arg(ap, char*);
+        tlen += strlen(tmp);
+    }
+    va_end(ap);
+
+    va_start(ap, nsets);
+    rv = PCF_FontCreateStaticFontVA(font, color, nsets, tlen, ap);
+    va_end(ap);
+
+    return rv;
+}
+
+/**
+ * va_list version of PCF_FontCreateStaticFont. The only difference is that
+ * this function needs to be provided with the total(cumulative) length of
+ * all the strings that it gets through ap. This is due to the fact that
+ * va_list can't be rewinded when passed as an argument to a non-variadic
+ * function
+ *
+ * @param font See PCF_FontCreateStaticFont @param font
+ * @param color See PCF_FontCreateStaticFont @param color
+ * @param nsets See PCF_FontCreateStaticFont @param nsets
+ * @param tlen Total (cumulative) len of the strings passed in.
+ * @param ap List of @param nsets char*
+ * @return See PCF_FontCreateStaticFont @return.
+ */
+
+PCF_StaticFont *PCF_FontCreateStaticFontVA(PCF_Font *font, SDL_Color *color, int nsets, size_t tlen, va_list ap)
+{
     Uint32 w,h;
     PCF_StaticFont *rv;
-    va_list ap;
     const char *tmp;
     char *iter;
     Uint32 col;
@@ -375,22 +411,15 @@ PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int n
         return NULL;
     }
 
-    va_start(ap, nsets);
-    for(int i = 0; i < nsets; i++){
-        tmp = va_arg(ap, const char*);
-        rv->nglyphs += strlen(tmp);
-    }
-    va_end(ap);
-
+    rv->nglyphs = tlen;
     rv->glyphs = SDL_calloc(rv->nglyphs + 1, sizeof(char));
+
     iter = rv->glyphs;
-    va_start(ap, nsets);
     for(int i = 0; i < nsets; i++){
         tmp = va_arg(ap, const char*);
         strcpy(iter, tmp);
         iter += strlen(tmp);
     }
-    va_end(ap);
 
     PCF_FontGetSizeRequest(font, rv->glyphs, &w, &h);
     /*The static font will hold an implicit default glyph at it's very end*/
@@ -416,6 +445,8 @@ PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int n
 
     return rv;
 }
+
+
 
 /**
  * Frees memory used by a static font. Each static font created using
