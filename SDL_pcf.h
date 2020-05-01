@@ -16,6 +16,7 @@ typedef struct{
 }PCF_Font;
 
 typedef struct{
+    int refcnt;
     SDL_Surface *raster;
     char *glyphs;
     Uint16 nglyphs;

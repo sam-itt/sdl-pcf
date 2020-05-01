@@ -67,8 +67,12 @@ PCF_Font *PCF_OpenFont(const char *filename)
  */
 void PCF_CloseFont(PCF_Font *self)
 {
-    pcfUnloadFont(&(self->xfont));
-    SDL_free(self);
+    if(self->xfont.refcnt <= 0){
+        pcfUnloadFont(&(self->xfont));
+        SDL_free(self);
+    }else{
+        self->xfont.refcnt--;
+    }
 }
 
 static void lit_pixel_1bpp(Uint8 *ptr, Uint32 color)
@@ -456,12 +460,16 @@ PCF_StaticFont *PCF_FontCreateStaticFontVA(PCF_Font *font, SDL_Color *color, int
  */
 void PCF_FreeStaticFont(PCF_StaticFont *self)
 {
-    SDL_free(self->glyphs);
-    SDL_FreeSurface(self->raster);
+    if(self->refcnt <= 0){
+        SDL_free(self->glyphs);
+        SDL_FreeSurface(self->raster);
 #if HAVE_SDL2
-    SDL_DestroyTexture(self->texture);
+        SDL_DestroyTexture(self->texture);
 #endif
-    SDL_free(self);
+        SDL_free(self);
+    }else{
+        self->refcnt--;
+    }
 }
 
 /**
