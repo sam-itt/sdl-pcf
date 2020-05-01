@@ -421,94 +421,40 @@ void PCF_FreeStaticFont(PCF_StaticFont *self)
 }
 
 /**
- * Writes a character on screen, using a pre-rendered font.
- * If the surface is too small to fit the char or if the glyph is partly out
- * of the surface (start writing a 18 pixel wide char 2 pixels before the edge)
- * only the pixels that can be written will be drawn, resulting in a partly
- * drawn glyph and the function will return false.
+ * Find the area in self->raster holding a glyph for c. The area is
+ * suitable for a SDL_BlitSurface or a SDL_RenderCopy operation using
+ * self->raster as a source
  *
- * @param font The font to use. Created by PCF_FontCreateStaticFont.
- * @param c The ASCII code of the char to write. You can of course use 'a'
- * instead of 97.
- * @param color The color of text. Must be in @param destination format (use
- * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
- * @param destination The surface to write to.
- * @param location Where to write on the surface. Can be NULL to write at
- * 0,0. If not NULL, location will be advanced by the width.
- * @return True on success(the whole char has been written), false on error/partial
- * draw. Details of the failure can be retreived with SDL_GetError().
+ * @param font The static font to search in.
+ * @param c    The char to search for.
+ * @param glyph Location where to put the coordinates, when found.
+ * @return true if @font has a glyph for c, false otherwise.
  */
-bool PCF_StaticFontWriteChar(PCF_StaticFont *font, int c, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+bool PCF_StaticFontGetCharRect(PCF_StaticFont *font, int c, SDL_Rect *glyph)
 {
     int i;
-    SDL_Rect glyph;
 
     if(c == ' ')
-        goto end;
-
-    location = location ? location : &(SDL_Rect){0,0,0,0};
+        return false;
 
     for(i = 0; i < font->nglyphs; i++){
         if(font->glyphs[i] == c)
             break;
     }
 
-    if(i == font->nglyphs)
+    if(i == font->nglyphs) /*TODO: Use the default glyph*/
         return SDL_SetError("%s: %c: glpyh not found in font %p",__FUNCTION__, c, font) > 0;
 
     /*The raster is a single glpyh height: All glyphs
      * begin at 0,0 and end at raster->h-1 (height-wise)*/
-    glyph.y = 0;
+    glyph->y = 0;
     /* First char(0) goes(x-wise) from 0 to width-1. Next char
      * starts at width, ends at width+width-1, etc.*/
-    glyph.x = i * font->metrics.characterWidth;
-    glyph.h = font->raster->h;
-    glyph.w = font->metrics.characterWidth;
+    glyph->x = i * font->metrics.characterWidth;
+    glyph->h = font->raster->h;
+    glyph->w = font->metrics.characterWidth;
 
-    SDL_BlitSurface(font->raster, &glyph, destination, location);
-
-end:
-    location->x += font->metrics.characterWidth;
     return true;
-}
-
-/**
- * Writes a string on screen, using pre-rendered static font. This function
- * will behave just like it's "live" font counterpart.
- *
- * @param str The string to write.
- * @param font The font to use. Created by PCF_FontCreateStaticFont.
- * @param color The color of text. Must be in @param destination format (use
- * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
- * @param destination The surface to write to.
- * @param location Where to write on the surface. Can be NULL to write at
- * 0,0. If not NULL, location will be advanced by the width of the string.
- * @return True on success(the whole string has been written), false on error/partial
- * draw. Details of the failure can be retreived with SDL_GetError().
- */
-bool PCF_StaticFontWrite(PCF_StaticFont *font, const char *str, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
-{
-    bool rv;
-    int end;
-    SDL_Rect cursor = (SDL_Rect){0, 0, 0 ,0};
-
-    /* ATM this function draws each glpyh individually using PCF_FontWriteChar.
-     * This could be optimized by drawing on a destination line basis
-     * TODO: Bench and try
-     * */
-
-    end = strlen(str);
-    if(!location)
-        location = &cursor;
-
-    rv = true;
-    for(int i = 0; i < end; i++){
-        if(PCF_StaticFontWriteChar(font, str[i], color, destination, location))
-            rv = false;
-        cursor.x += font->metrics.characterWidth;
-    }
-
-    return rv;
 }
 
 /**

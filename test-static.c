@@ -115,6 +115,7 @@ int main(int argc, char **argv)
 
     SDL_Rect location = {SCREEN_WIDTH/2 -1, SCREEN_HEIGHT/2 -1,0 ,0};
     location.x -= (msg_w/2 -1);
+    SDL_Rect glyph;
     int j = 0;
     do{
         ticks = SDL_GetTicks();
@@ -122,7 +123,9 @@ int main(int argc, char **argv)
 
         done = handle_events();
         if( j < msglen){
-            PCF_StaticFontWriteChar(sfont, message[j], white, screenSurface, &location);
+            if(PCF_StaticFontGetCharRect(sfont, message[j], &glyph))
+                SDL_BlitSurface(sfont->raster, &glyph, screenSurface, &location);
+            location.x += sfont->metrics.characterWidth;
             j++;
         }
 
@@ -133,7 +136,7 @@ int main(int argc, char **argv)
         }
         last_ticks = ticks;
     }while(!done);
-    SDL_PcfFreeStaticFont(sfont);
+    PCF_FreeStaticFont(sfont);
 
     SDL_DestroyWindow(window);
     SDL_Quit();
