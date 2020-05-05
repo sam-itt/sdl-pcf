@@ -453,6 +453,7 @@ PCF_StaticFont *PCF_FontCreateStaticFontVA(PCF_Font *font, SDL_Color *color, int
     w += font->xfont.fontPrivate->pDefault->metrics.characterWidth;
     /*Creates a 32bit surface by default which might be overkill*/
     rv->raster = SDL_CreateRGBSurfaceWithFormat(0, w, h, 32, SDL_PIXELFORMAT_RGBA32);
+    rv->text_color = *color;
     col =  SDL_MapRGBA(rv->raster->format, color->r, color->g, color->b, color->a);
     rv->nglyphs = strlen(rv->glyphs);
     qsort(rv->glyphs, rv->nglyphs, sizeof(char), (__compar_fn_t) strcmp);

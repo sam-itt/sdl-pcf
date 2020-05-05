@@ -21,6 +21,7 @@ typedef struct{
     char *glyphs;
     Uint16 nglyphs;
     xCharInfo   metrics;
+    SDL_Color text_color;
 #if HAVE_SDL2
     SDL_Texture *texture;
 #endif
