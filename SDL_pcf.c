@@ -579,7 +579,34 @@ void PCF_StaticFontGetSizeRequestRect(PCF_StaticFont *font, const char *str, SDL
     rect->h = font->metrics.ascent + font->metrics.descent;
 }
 
+/**
+ * Check whether @param font can be used to write all chars given in
+ * @param sequence in color @param color.
+ *
+ * @param color The color you want to write in
+ * @param sequence All the chars you may want to use
+ * @return true if all chars of @param sequence can be written in
+ * @param color, false otherwise.
+ */
+bool PCF_StaticFontCanWrite(PCF_StaticFont *font, SDL_Color *color, const char *sequence)
+{
+    int len;
 
+    if(memcmp(&font->text_color, color, sizeof(SDL_Color)) != 0){
+        return false;
+    }
+
+    len = strlen(sequence);
+    if(len == font->nglyphs)
+        return strcmp(sequence, font->glyphs) == 0;
+
+    for(int i = 0; i < len; i++){
+        if(!strchr(font->glyphs, sequence[i]))
+            return false;
+    }
+
+    return true;
+}
 
 #if HAVE_SDL2
 void PCF_StaticFontCreateTexture(PCF_StaticFont *font, SDL_Renderer *renderer)
