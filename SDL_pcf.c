@@ -14,6 +14,7 @@
 
 typedef void (*PixelLighter)(Uint8 *ptr, Uint32 color);
 
+static void filter_dedup(char *base, size_t len);
 
 
 PCF_Font *PCF_FontInit(PCF_Font *self, const char *filename)
@@ -381,8 +382,8 @@ void PCF_FontDumpGlpyh(PCF_Font *font, int c)
  * @param color The color of the pre-rendered glyphs
  * @param nsets The number of glyph sets that follows
  * @param ...   Sets of glyphs to include in the cache, as const char*. You can
- * use pre-defined sets such as PCF_ALPHA, PCF_DIGIT, etc. WARNING: The function
- * doesn't check for duplicates characters.
+ * use pre-defined sets such as PCF_ALPHA, PCF_DIGIT, etc. The function will
+ * filter out duplicated characters.
  * @returns a newly allocated PCF_StaticFont or NULL on error. The error will be
  * available with SDL_GetError()
  *
@@ -423,7 +424,6 @@ PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int n
  * @param ap List of @param nsets char*
  * @return See PCF_FontCreateStaticFont @return.
  */
-
 PCF_StaticFont *PCF_FontCreateStaticFontVA(PCF_Font *font, SDL_Color *color, int nsets, size_t tlen, va_list ap)
 {
     Uint32 w,h;
@@ -456,6 +456,7 @@ PCF_StaticFont *PCF_FontCreateStaticFontVA(PCF_Font *font, SDL_Color *color, int
     col =  SDL_MapRGBA(rv->raster->format, color->r, color->g, color->b, color->a);
     rv->nglyphs = strlen(rv->glyphs);
     qsort(rv->glyphs, rv->nglyphs, sizeof(char), (__compar_fn_t) strcmp);
+    filter_dedup(rv->glyphs, rv->nglyphs);
 
     rv->metrics = font->xfont.fontPrivate->metrics->metrics;
     PCF_FontWrite(
@@ -586,3 +587,28 @@ void PCF_StaticFontCreateTexture(PCF_StaticFont *font, SDL_Renderer *renderer)
     /*TODO: Check if it's appropriate to free the surface*/
 }
 #endif
+
+
+
+/**
+ * Remove duplicates characters from base. base must be sorted
+ * so that duplicates follow each other (i.e. use qsort() beforehand).
+ *
+ * @param base The string to filter
+ * @param len THe string len, -1 to have the function compute it.
+ */
+static void filter_dedup(char *base, size_t len)
+{
+    len = len > -1 ? len : strlen(base);
+
+    for(int i = 1; i < len; i++){
+        if(base[i] == base[i-1]){
+            for(int j = i; j < len; j++){
+                /* Index doesn't go OOB, last iteration will
+                 * access (and move back) the final '\0' */
+                base[j] = base[j+1];
+            }
+        }
+    }
+}
+
