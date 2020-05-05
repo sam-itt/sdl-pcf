@@ -280,6 +280,29 @@ void PCF_FontGetSizeRequest(PCF_Font *font, const char *str, Uint32 *w, Uint32 *
         *h = font->xfont.fontPrivate->metrics->metrics.ascent + font->xfont.fontPrivate->metrics->metrics.descent;
 }
 
+
+/**
+ * Same PCF_FontGetSizeRequest as but fills an SDL_Rect. Rect x and y
+ * get initialized to 0.
+ *
+ * @param str The string whose size you need to know.
+ * @param font The font you want to use to write that string
+ * @param rect Pointer to an existing SDL_Rect (cannot be NULL) to fill with
+ * the size request.
+ */
+void PCF_FontGetSizeRequestRect(PCF_Font *font, const char *str, SDL_Rect *rect)
+{
+    int len;
+
+    len = strlen(str);
+
+    rect->x = 0;
+    rect->y = 0;
+    rect->w = font->xfont.fontPrivate->metrics->metrics.characterWidth * len;
+    rect->h = font->xfont.fontPrivate->metrics->metrics.ascent + font->xfont.fontPrivate->metrics->metrics.descent;
+}
+
+
 /**
  * Dump a char drawing on stdout using on char per pixel, '#' for lit pixels
  * and '.' for others. Helps with debugging the code. Not public, shoudln't
@@ -535,6 +558,26 @@ void PCF_StaticFontGetSizeRequest(PCF_StaticFont *font, const char *str, Uint32 
     if(h)
         *h = font->metrics.ascent + font->metrics.descent;
 }
+
+/**
+ * Same PCF_StaticFontGetSizeRequest as but fills an SDL_Rect. Rect x and y
+ * get initialized to 0.
+ *
+ * @param str The string whose size you need to know.
+ * @param font The font you want to use to write that string
+ * @param rect Pointer to an existing SDL_Rect (cannot be NULL) to fill with
+ * the size request.
+ */
+void PCF_StaticFontGetSizeRequestRect(PCF_StaticFont *font, const char *str, SDL_Rect *rect)
+{
+    int len;
+
+    len = strlen(str);
+    rect->w = font->metrics.characterWidth * len;
+    rect->h = font->metrics.ascent + font->metrics.descent;
+}
+
+
 
 #if HAVE_SDL2
 void PCF_StaticFontCreateTexture(PCF_StaticFont *font, SDL_Renderer *renderer)
