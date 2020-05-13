@@ -258,6 +258,140 @@ bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *d
     return rv;
 }
 
+#ifdef HAVE_SDL2
+/**
+ * Writes a character on a SDL_Renderer, and advance the given location by one
+ * char width.
+ * If the renderer is too small to fit the char or if the glyph is partly out
+ * of the surface (start writing a 18 pixel wide char 2 pixels before the edge)
+ * only the pixels that can be written will be drawn, resulting in a partly
+ * drawn glyph and the function will return false.
+ *
+ * Note that there is no color parameter: This is controlled at the
+ * SDL_Renderer level with SDL_SetRenderDrawColor.
+ *
+ * @param c The ASCII code of the char to write. You can of course use 'a'
+ * instead of 97.
+ * @param font The font to use to write the char. Opened by PCF_OpenFont.
+ * @param renderer The renderer that will be used to draw.
+ * @param location Location within the renderer. Can be NULL to write at
+ * 0,0. If not NULL, location will be advanced by the width.
+ * @return True on success(the whole char has been written), false on error/partial
+ * draw. Details of the failure can be retreived with SDL_GetError().
+ */
+bool PCF_FontRenderChar(PCF_Font *font, int c, SDL_Renderer *renderer, SDL_Rect *location)
+{
+    int w, h;
+    int line_bsize;
+    CharInfoRec *glyph;
+    BitmapFontRec *bitmapFont;
+    unsigned char byte;
+    unsigned char *glyph_line;
+    int nbytes;
+    bool rv;
+    int y, x;
+    int rw, rh;
+    rv = true;
+
+    if(c == ' ')
+        goto end;
+
+    location = location ? location : &(SDL_Rect){0,0,0,0};
+
+    bitmapFont  = font->xfont.fontPrivate;
+    if(c >= bitmapFont->num_chars || c < 0){
+        SDL_SetError("%s: no glyph for char %d, falling back to default glyph", __FUNCTION__, c);
+        glyph = font->xfont.fontPrivate->pDefault;
+        rv = false;
+    }else{
+        glyph = &bitmapFont->metrics[c];
+    }
+
+    /*TODO: Check if can do with FontRec struct members*/
+    w = glyph->metrics.rightSideBearing - glyph->metrics.leftSideBearing;
+    h = glyph->metrics.ascent + glyph->metrics.descent;
+
+    SDL_GetRendererOutputSize(renderer, &rw, &rh);
+
+    /*start after the end of the output size, nothing to draw*/
+    if(location->x >= rw || location->y >= rh){
+        return false;
+    }
+
+    /* FontRec.Glyph is line padding in number of bytes. See pcfReadFont
+     * comments for a detailed explaination
+     * */
+    line_bsize = ceil(w/(font->xfont.glyph * 8.0))*font->xfont.glyph; /*in bytes*/
+    nbytes = ceil(w/(8.0)); /*actual glyph width in bytes (w/o padding)*/
+    for(int i = 0; i < h; i++){
+        glyph_line = (unsigned char*)glyph->bits + (i * line_bsize);
+        y = location->y+i;
+        if(y > rh) continue; /*clip y*/
+        x = location->x;
+        for(int j = 0; j < nbytes; j++){
+            byte = *(unsigned char*)(glyph_line + j);
+            for(int k = 0; k < 8; k++){
+                if(byte & (1 << k)){
+                    if(x < rw) /*Clip x*/
+                        SDL_RenderDrawPoint(renderer, x ,y);
+                }
+                x++;
+            }
+        }
+    }
+
+end:
+    location->x += font->xfont.fontPrivate->metrics->metrics.characterWidth;
+    return rv;
+}
+
+/**
+ * Writes a string on renderer. This function will try it's best to write
+ * as many chars as possible: If the renderer is not wide enough to accomodate
+ * the whole string, it will stop at the very last pixel (and return false).
+ * This function doesn't wrap lines. Use PCF_FontGetSizeRequest to get needed
+ * space for a given string/font.
+ *
+ * @param str The string to write.
+ * @param font The font to use. Opened by PCF_OpenFont.
+ * @param color The color of text. If not NULL, it will overrede the current
+ * renderer's color. If NULL, the current renderer's color will be used.
+ * @param renderer The rendering context to use.
+ * @param location Where to write on the renderer. Can be NULL to write at
+ * 0,0. If not NULL, location will be advanced by the width of the string.
+ * @return True on success(the whole string has been written), false on error/partial
+ * draw. Details of the failure can be retreived with SDL_GetError().
+ */
+bool PCF_FontRender(PCF_Font *font, const char *str, SDL_Color *color, SDL_Renderer *renderer, SDL_Rect *location)
+{
+    bool rv;
+    int end;
+    SDL_Rect cursor = (SDL_Rect){0, 0, 0 ,0};
+
+    /* ATM this function draws each glpyh individually using PCF_FontWriteChar.
+     * This could be optimized by drawing on a destination line basis
+     * TODO: Bench and try
+     * */
+
+    end = strlen(str);
+    if(!location)
+        location = &cursor;
+
+    if(color)
+        SDL_SetRenderDrawColor(renderer, color->r, color->g, color->b, color->a);
+
+    rv = true;
+    for(int i = 0; i < end; i++){
+        if(!PCF_FontRenderChar(font, str[i], renderer, location))
+            rv = false;
+    }
+
+    return rv;
+}
+
+
+#endif
+
 /**
  * Computes space (pixels width*height) needed to draw a string using a given
  * font. Both @param w and @param h can be NULL depending on which metric you

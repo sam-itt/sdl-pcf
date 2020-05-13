@@ -33,6 +33,11 @@ bool PCF_FontWriteChar(PCF_Font *font, int c, Uint32 color, SDL_Surface *destina
 bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *destination, SDL_Rect *location);
 void PCF_FontGetSizeRequest(PCF_Font *font, const char *str, Uint32 *w, Uint32 *h);
 void PCF_FontGetSizeRequestRect(PCF_Font *font, const char *str, SDL_Rect *rect);
+#if HAVE_SDL2
+bool PCF_FontRenderChar(PCF_Font *font, int c, SDL_Renderer *renderer, SDL_Rect *location);
+bool PCF_FontRender(PCF_Font *font, const char *str, SDL_Color *color, SDL_Renderer *renderer, SDL_Rect *location);
+#endif
+
 
 PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int nsets, ...);
 PCF_StaticFont *PCF_FontCreateStaticFontVA(PCF_Font *font, SDL_Color *color, int nsets, size_t tlen, va_list ap);
