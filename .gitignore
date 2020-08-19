@@ -5,9 +5,27 @@ notes
 *.bdf
 .clangd/
 compile_commands.json
-test-pcf
-test-static
 
+*.in
+*.pc
+config.*
+.deps
+.libs
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache/
+compile
+configure
+depcomp
+install-sh
+libtool
+ltmain.sh
+m4/
+missing
+stamp-h1
+test/ayba
+test/ayba-sf
 
 # Prerequisites
 *.d
