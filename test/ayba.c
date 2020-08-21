@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #include "SDL_pcf.h"
 
@@ -56,7 +56,6 @@ int main(int argc, char **argv)
     bool done;
     int i;
 
-#if HAVE_SDL2
     SDL_Renderer *renderer;
     bool use_renderer = false;
 
@@ -66,7 +65,6 @@ int main(int argc, char **argv)
     }else{
         printf("Using SDL_BlitSurface\n");
     }
-#endif
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "could not initialize sdl2: %s\n", SDL_GetError());
@@ -84,7 +82,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-#if HAVE_SDL2
     if(use_renderer){
         SDL_RendererInfo rinfo;
         renderer = SDL_CreateRenderer(window, -1, 0);
@@ -97,18 +94,15 @@ int main(int argc, char **argv)
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
     }else{
-#endif
-    screenSurface = SDL_GetWindowSurface(window);
-    if(!screenSurface){
-        printf("Error: %s\n",SDL_GetError());
-        exit(-1);
+        screenSurface = SDL_GetWindowSurface(window);
+        if(!screenSurface){
+            printf("Error: %s\n",SDL_GetError());
+            exit(-1);
+        }
+        white = SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF);
+        black  = SDL_MapRGB(screenSurface->format, 0x00, 0x00, 0x00);
+        SDL_FillRect(screenSurface, NULL, black);
     }
-    white = SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF);
-    black  = SDL_MapRGB(screenSurface->format, 0x00, 0x00, 0x00);
-    SDL_FillRect(screenSurface, NULL, black);
-#if HAVE_SDL2
-    }
-#endif
 
     font = PCF_OpenFont("ter-x24n.pcf.gz");
     if(!font){
@@ -128,30 +122,24 @@ int main(int argc, char **argv)
     SDL_Rect location = {SCREEN_WIDTH/2 -1, SCREEN_HEIGHT/2 -1,0 ,0};
     location.x -= (msg_w/2 -1);
     int j = 0;
-#if HAVE_SDL2
     if(use_renderer)
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE);
-#endif
     do{
         ticks = SDL_GetTicks();
         elapsed = ticks - last_ticks;
 
         done = handle_events();
         if( j < msglen){
-#if HAVE_SDL2
-                if(use_renderer)
-                    PCF_FontRenderChar(font, message[j], renderer, &location);
-                else
-#endif
-            PCF_FontWriteChar(font, message[j], white, screenSurface, &location);
+            if(use_renderer)
+                PCF_FontRenderChar(font, message[j], renderer, &location);
+            else
+                PCF_FontWriteChar(font, message[j], white, screenSurface, &location);
             j++;
         }
-#if HAVE_SDL2
         if(use_renderer)
             SDL_RenderPresent(renderer);
         else
-#endif
-        SDL_UpdateWindowSurface(window);
+            SDL_UpdateWindowSurface(window);
 
         if(elapsed < 400){
             SDL_Delay(400 - elapsed);

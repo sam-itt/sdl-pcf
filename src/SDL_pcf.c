@@ -258,7 +258,6 @@ bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *d
     return rv;
 }
 
-#ifdef HAVE_SDL2
 /**
  * Writes a character on a SDL_Renderer, and advance the given location by one
  * char width.
@@ -388,9 +387,6 @@ bool PCF_FontRender(PCF_Font *font, const char *str, SDL_Color *color, SDL_Rende
 
     return rv;
 }
-
-
-#endif
 
 /**
  * Computes space (pixels width*height) needed to draw a string using a given
@@ -622,9 +618,7 @@ void PCF_FreeStaticFont(PCF_StaticFont *self)
     if(self->refcnt <= 0){
         SDL_free(self->glyphs);
         SDL_FreeSurface(self->raster);
-#if HAVE_SDL2
         SDL_DestroyTexture(self->texture);
-#endif
         SDL_free(self);
     }else{
         self->refcnt--;
@@ -742,15 +736,11 @@ bool PCF_StaticFontCanWrite(PCF_StaticFont *font, SDL_Color *color, const char *
     return true;
 }
 
-#if HAVE_SDL2
 void PCF_StaticFontCreateTexture(PCF_StaticFont *font, SDL_Renderer *renderer)
 {
     font->texture = SDL_CreateTextureFromSurface(renderer, font->raster);
     /*TODO: Check if it's appropriate to free the surface*/
 }
-#endif
-
-
 
 /**
  * Remove duplicates characters from base. base must be sorted

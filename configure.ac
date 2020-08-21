@@ -39,10 +39,6 @@ AC_SUBST([LT_CURRENT])
 AC_SUBST([LT_REVISION])
 AC_SUBST([LT_AGE])
 
-#Arguments
-AC_ARG_WITH([sdl1], AS_HELP_STRING([--without-sdl1], [Disable building for SDL1 eve, if detected]))
-AC_ARG_WITH([sdl2], AS_HELP_STRING([--without-sdl2], [Disable building for SDL2 even if detected]))
-
 # Detect the canonical host and target build environment
 AC_CANONICAL_HOST
 #AC_CANONICAL_TARGET
@@ -54,44 +50,14 @@ AC_PROG_MAKE_SET
 AC_PROG_CC
 AC_PROG_INSTALL
 
-AS_IF([test "x$with_sdl1" != "xno"],
-    [PKG_CHECK_MODULES([SDL], [sdl], [HAVE_SDL1=1], [HAVE_SDL1=0])],
-    [HAVE_SDL1=0]
-)
-AM_CONDITIONAL(HAVE_SDL1, test "x$HAVE_SDL1" != "x0")
-
-AS_IF([test "x$with_sdl2" != "xno"],
-    [PKG_CHECK_MODULES([SDL2], [sdl2], [HAVE_SDL2=1], [HAVE_SDL2=0])],
-    [HAVE_SDL2=0]
-)
-AM_CONDITIONAL(HAVE_SDL2, test "x$HAVE_SDL2" != "x0")
-
-AS_IF([test "x$HAVE_SDL1" == "x0" && test "x$HAVE_SDL2" == "x0"],
-    [AC_MSG_ERROR("SDL_pcf needs either SDL1 or SDL2. None found")]
-)
+PKG_CHECK_MODULES([SDL2], [sdl2])
 
 AC_CHECK_LIB([z], [gzopen], [], [AC_MSG_ERROR([Z library not found,
               please install zlib.], [1])])
 
-#SDL_gpu doesn't have a pkg-config file yet
-AC_CHECK_LIB(SDL_gpu, GPU_Init, [HAVE_SDL_GPU=1])
-AC_CHECK_LIB(SDL2_gpu, GPU_Init, [HAVE_SDL2_GPU=1])
-
-AM_CONDITIONAL(HAVE_SDL_GPU, test "x$HAVE_SDL_GPU" == "x1")
-AM_CONDITIONAL(HAVE_SDL2_GPU, test "x$HAVE_SDL2_GPU" == "x1")
-
-# Export to config.h
-AS_IF([test "x$HAVE_SDL1" == "x1"], AC_DEFINE(HAVE_SDL1,[1],[Build for SDL1]))
-AS_IF([test "x$HAVE_SDL2" == "x1"], AC_DEFINE(HAVE_SDL2,[1],[Build for SDL2]))
-AS_IF([test "x$HAVE_SDL_GPU" == "x1"], AC_DEFINE(HAVE_SDL_GPU,[1],[Enable support for SDL_gpu]))
-AS_IF([test "x$HAVE_SDL2_GPU" == "x1"], AC_DEFINE(HAVE_SDL2_GPU,[1],[Enable support for SDL2_gpu]))
-
 AC_CONFIG_FILES([Makefile
+                 SDL2_pcf.pc
                  src/Makefile
                  test/Makefile
                  ])
-
-AM_COND_IF([HAVE_SDL1], [AC_CONFIG_FILES([SDL_pcf.pc])])
-AM_COND_IF([HAVE_SDL2], [AC_CONFIG_FILES([SDL2_pcf.pc])])
-
 AC_OUTPUT

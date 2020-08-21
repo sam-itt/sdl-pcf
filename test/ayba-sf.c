@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #include "SDL_pcf.h"
 #include "SDL_surface.h"
@@ -59,7 +59,6 @@ int main(int argc, char **argv)
     bool done;
     int i;
 
-#if HAVE_SDL2
     SDL_Renderer *renderer;
     bool use_renderer = false;
 
@@ -69,7 +68,6 @@ int main(int argc, char **argv)
     }else{
         printf("Using SDL_BlitSurface\n");
     }
-#endif
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "could not initialize sdl2: %s\n", SDL_GetError());
@@ -87,7 +85,6 @@ int main(int argc, char **argv)
         return 1;
     }
 
-#if HAVE_SDL2
     if(use_renderer){
         SDL_RendererInfo rinfo;
         renderer = SDL_CreateRenderer(window, -1, 0);
@@ -100,18 +97,15 @@ int main(int argc, char **argv)
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
     }else{
-#endif
-    screenSurface = SDL_GetWindowSurface(window);
-    if(!screenSurface){
-        printf("Error: %s\n",SDL_GetError());
-        exit(-1);
+        screenSurface = SDL_GetWindowSurface(window);
+        if(!screenSurface){
+            printf("Error: %s\n",SDL_GetError());
+            exit(-1);
+        }
+        white = SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF);
+        black  = SDL_MapRGB(screenSurface->format, 0x00, 0x00, 0x00);
+        SDL_FillRect(screenSurface, NULL, black);
     }
-    white = SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF);
-    black  = SDL_MapRGB(screenSurface->format, 0x00, 0x00, 0x00);
-    SDL_FillRect(screenSurface, NULL, black);
-#if HAVE_SDL2
-    }
-#endif
 
     font = PCF_OpenFont("ter-x24n.pcf.gz");
     if(!font){
@@ -129,10 +123,8 @@ int main(int argc, char **argv)
         printf("%s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
-#if HAVE_SDL2
     if(use_renderer)
         PCF_StaticFontCreateTexture(sfont, renderer);
-#endif
 
 
     done = false;
@@ -158,22 +150,18 @@ int main(int argc, char **argv)
         done = handle_events();
         if( j < msglen){
             if(PCF_StaticFontGetCharRect(sfont, message[j], &glyph)){
-#if HAVE_SDL2
                 if(use_renderer)
                     SDL_RenderCopy(renderer, sfont->texture, &glyph, &location);
                 else
-#endif
-                SDL_BlitSurface(sfont->raster, &glyph, screenSurface, &location);
+                    SDL_BlitSurface(sfont->raster, &glyph, screenSurface, &location);
             }
             location.x += sfont->metrics.characterWidth;
             j++;
         }
-#if HAVE_SDL2
         if(use_renderer)
             SDL_RenderPresent(renderer);
         else
-#endif
-        SDL_UpdateWindowSurface(window);
+            SDL_UpdateWindowSurface(window);
 
         if(elapsed < 400){
             SDL_Delay(400 - elapsed);
