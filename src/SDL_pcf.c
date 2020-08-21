@@ -1,3 +1,7 @@
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -618,7 +622,11 @@ void PCF_FreeStaticFont(PCF_StaticFont *self)
     if(self->refcnt <= 0){
         SDL_free(self->glyphs);
         SDL_FreeSurface(self->raster);
+#if USE_SDL2_TEXTURE
         SDL_DestroyTexture(self->texture);
+#elif USE_SGPU_TEXTURE
+        GPU_FreeImage(self->texture);
+#endif
         SDL_free(self);
     }else{
         self->refcnt--;
@@ -736,11 +744,21 @@ bool PCF_StaticFontCanWrite(PCF_StaticFont *font, SDL_Color *color, const char *
     return true;
 }
 
+#if USE_SDL2_TEXTURE
 void PCF_StaticFontCreateTexture(PCF_StaticFont *font, SDL_Renderer *renderer)
 {
     font->texture = SDL_CreateTextureFromSurface(renderer, font->raster);
     /*TODO: Check if it's appropriate to free the surface*/
 }
+#elif USE_SGPU_TEXTURE
+void PCF_StaticFontCreateTexture(PCF_StaticFont *font)
+{
+    font->texture = GPU_CopyImageFromSurface(font->raster);
+    /*TODO: Check if it's appropriate to free the surface*/
+}
+#endif
+
+
 
 /**
  * Remove duplicates characters from base. base must be sorted

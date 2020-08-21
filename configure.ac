@@ -50,7 +50,34 @@ AC_PROG_MAKE_SET
 AC_PROG_CC
 AC_PROG_INSTALL
 
+#Arguments
+AC_ARG_WITH([texture], [AS_HELP_STRING([--with-texture=sdl2,sdl_gpu], [Select texture support for static fonts])],
+            [],
+            [with_texture=sdl2])
+
 PKG_CHECK_MODULES([SDL2], [sdl2])
+
+AS_CASE(["x$with_texture"],
+   ["xsdl2"],[
+        AC_DEFINE(USE_SDL2_TEXTURE,[1],[Enable support for SDL2 textures])
+        AC_SUBST(SFONT_TEXTURE_TYPE,["SDL_Texture "])
+        AC_SUBST(SFONT_CREATE_TEXTURE_ARGS,[", SDL_Renderer *renderer"])
+        AC_SUBST(PCF_TEXTURE_TYPE, ["PCF_TEXTURE_SDL2"])
+   ],
+   ["xsdl_gpu"],[
+        #SDL_gpu doesn't have a pkg-config file yet
+        AC_CHECK_LIB(SDL2_gpu, GPU_Init)
+        AC_DEFINE(USE_SGPU_TEXTURE,[1],[Enable support for SDL_gpu textures/images])
+        AC_SUBST(SDL_GPU_INCLUDE, ["#include <SDL_gpu.h>"])
+        AC_SUBST(SFONT_TEXTURE_TYPE,["GPU_Image "])
+        AC_SUBST(PCF_TEXTURE_TYPE, ["PCF_TEXTURE_GPU"])
+   ],
+   [
+    AC_MSG_ERROR(["Valid values for --with-texture are 'sdl2' and 'sdl_gpu'"])
+   ]
+)
+AM_CONDITIONAL(USE_SGPU_TEXTURE, test "x$with_texture" == "xsdl_gpu")
+
 
 AC_CHECK_LIB([z], [gzopen], [], [AC_MSG_ERROR([Z library not found,
               please install zlib.], [1])])
@@ -58,6 +85,7 @@ AC_CHECK_LIB([z], [gzopen], [], [AC_MSG_ERROR([Z library not found,
 AC_CONFIG_FILES([Makefile
                  SDL2_pcf.pc
                  src/Makefile
+                 src/SDL_pcf.h
                  test/Makefile
                  ])
 AC_OUTPUT

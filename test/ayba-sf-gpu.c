@@ -3,9 +3,9 @@
 #include <stdbool.h>
 
 #include <SDL.h>
+#include <SDL_gpu.h>
 
 #include "SDL_pcf.h"
-#include "SDL_surface.h"
 
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 480
@@ -49,68 +49,31 @@ bool handle_events(void)
 
 int main(int argc, char **argv)
 {
-    SDL_Window* window = NULL;
-    SDL_Surface* screenSurface = NULL;
+    GPU_Target* gpu_screen = NULL;
+
     Uint32 black, white;
     PCF_Font *font;
     PCF_StaticFont *sfont;
     SDL_Rect glyph;
+    GPU_Rect g_glyph;
     Uint32 msg_w,msg_h;
     bool done;
     int i;
 
-    SDL_Renderer *renderer;
-    bool use_renderer = false;
-
-    if(argc > 1){
-        if(PCF_TEXTURE_TYPE == PCF_TEXTURE_SDL2){
-            printf("Using the renderer\n");
-            use_renderer = true;
-        }else{
-            printf("SDL_pcf was built for SDL_gpu, can't use SDL2 textures. Try ayba-sf-gpu instead\n");
-            use_renderer = false;
-        }
-    }else{
-        printf("Using SDL_BlitSurface\n");
+    if(PCF_TEXTURE_TYPE != PCF_TEXTURE_GPU){
+        printf("Cannot run SDL_gpu sample, no SDL_gpu support in SDL_pcf\n");
+        exit(EXIT_FAILURE);
     }
+    printf("Using SDL_gpu GPU_Blit\n");
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        fprintf(stderr, "could not initialize sdl2: %s\n", SDL_GetError());
+    GPU_SetRequiredFeatures(GPU_FEATURE_BASIC_SHADERS);
+    gpu_screen = GPU_InitRenderer(GPU_RENDERER_OPENGL_2, SCREEN_WIDTH, SCREEN_HEIGHT, GPU_DEFAULT_INIT_FLAGS);
+    if(gpu_screen == NULL){
+        GPU_LogError("Initialization Error: Could not create a renderer with proper feature support for this demo.\n");
         return 1;
     }
 
-    window = SDL_CreateWindow(
-                "SDL_pcf test drive",
-                SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                SCREEN_WIDTH, SCREEN_HEIGHT,
-                SDL_WINDOW_SHOWN
-                );
-    if (window == NULL) {
-        fprintf(stderr, "could not create window: %s\n", SDL_GetError());
-        return 1;
-    }
-
-    if(use_renderer){
-        SDL_RendererInfo rinfo;
-        renderer = SDL_CreateRenderer(window, -1, 0);
-        if (renderer == NULL) {
-            fprintf(stderr, "could not create renderer: %s\n", SDL_GetError());
-            return 1;
-        }
-        SDL_GetRendererInfo(renderer, &rinfo);
-        printf("Got renderer: %s\n", rinfo.name);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-    }else{
-        screenSurface = SDL_GetWindowSurface(window);
-        if(!screenSurface){
-            printf("Error: %s\n",SDL_GetError());
-            exit(-1);
-        }
-        white = SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF);
-        black  = SDL_MapRGB(screenSurface->format, 0x00, 0x00, 0x00);
-        SDL_FillRect(screenSurface, NULL, black);
-    }
+    GPU_ClearRGB(gpu_screen, 0x00, 0x00, 0x00);
 
     font = PCF_OpenFont("ter-x24n.pcf.gz");
     if(!font){
@@ -128,10 +91,8 @@ int main(int argc, char **argv)
         printf("%s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
-#if PCF_TEXTURE_TYPE == PCF_TEXTURE_SDL2
-    if(use_renderer)
-        PCF_StaticFontCreateTexture(sfont, renderer);
-#endif
+
+    PCF_StaticFontCreateTexture(sfont);
 
 
     done = false;
@@ -157,21 +118,13 @@ int main(int argc, char **argv)
         done = handle_events();
         if( j < msglen){
             if(PCF_StaticFontGetCharRect(sfont, message[j], &glyph)){
-                if(use_renderer){
-#if PCF_TEXTURE_TYPE == PCF_TEXTURE_SDL2
-                    SDL_RenderCopy(renderer, sfont->texture, &glyph, &location);
-#endif
-                }else{
-                    SDL_BlitSurface(sfont->raster, &glyph, screenSurface, &location);
-                }
+                g_glyph = (GPU_Rect){glyph.x, glyph.y, glyph.w, glyph.h};
+                GPU_Blit(sfont->texture, &g_glyph, gpu_screen, location.x, location.y);
             }
             location.x += sfont->metrics.characterWidth;
             j++;
         }
-        if(use_renderer)
-            SDL_RenderPresent(renderer);
-        else
-            SDL_UpdateWindowSurface(window);
+        GPU_Flip(gpu_screen);
 
         if(elapsed < 400){
             SDL_Delay(400 - elapsed);
@@ -179,9 +132,6 @@ int main(int argc, char **argv)
         last_ticks = ticks;
     }while(!done);
     PCF_FreeStaticFont(sfont);
-
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+    GPU_Quit();
     return 0;
-
 }

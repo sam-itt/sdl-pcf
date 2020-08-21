@@ -24,8 +24,11 @@ ltmain.sh
 m4/
 missing
 stamp-h1
+src/SDL_pcf.h
 test/ayba
 test/ayba-sf
+test/ayba-sf-gpu
+
 
 # Prerequisites
 *.d
