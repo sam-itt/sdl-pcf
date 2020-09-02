@@ -28,7 +28,7 @@ src/SDL_pcf.h
 test/ayba
 test/ayba-sf
 test/ayba-sf-gpu
-
+docs/build/
 
 # Prerequisites
 *.d

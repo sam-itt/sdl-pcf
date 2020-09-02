@@ -16,26 +16,19 @@ PCF_Font *font;
 font = PCF_OpenFont("ter-x24n.pcf.gz");
 PCF_FontWrite(font, "Hello world !", white, screenSurface, &location);
 ```
-You just need to include 4 source files and 4 headers in your project. No library building script is provided (yet, contributions are welcome).
+You just need to include SDL_pcf.h and call pkg-config with SDL2_pcf.
 
 # Documentation and demo code
 ----------------------------------------
-SDL_pcf currently has 4 public functions:
-- PCF_OpenFont(const char *filename)
-- PCF_CloseFont(PCF_Font *self)
-- PCF_FontWriteChar
-- PCF_FontWrite
-- PCF_FontGetSizeRequest
+Full documentation can be found [here](https://sdl-pcf.readthedocs.io/en/latest/).
 
-Names have been chosen to be self explanatory, but documentation is
-also provided as javadoc-like comment blocs before each function in SDL_pcf.c.
-
-A demo code is provided in test.c that can be built on Unix using make:
+Demo code is provided in test/ that can be built on Unix using make:
 ```sh
-$ make
-$ ./test-pcf
+$ make check
+$ ./test/ayba
 #press <ESC> to quit
 ```
 ### Dependencies:
-- SDL (1 or 2)
+- SDL2
 - zlib
+- Optional support for SDL_gpu
