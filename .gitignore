@@ -29,6 +29,9 @@ test/ayba
 test/ayba-sf
 test/ayba-sf-gpu
 docs/build/
+test/simple-test
+test/simple-test-sf
+
 
 # Prerequisites
 *.d
