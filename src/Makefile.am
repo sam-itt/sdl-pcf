@@ -17,3 +17,6 @@ libSDL2_pcf_la_SOURCES = pcfread.c \
 libSDL2_pcf_la_LDFLAGS = \
 	-no-undefined -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) $(LIBS)
 
+EXTRA_DIST = pcf.h \
+			 SDL_GzRW.h \
+			 utilbitmap.h

@@ -8,3 +8,5 @@ if USE_SGPU_TEXTURE
 check_PROGRAMS += ayba-sf-gpu
 endif
 AM_DEFAULT_SOURCE_EXT = .c
+
+EXTRA_DIST = simple-test.c simple-test-sf.c ter-x24n.pcf.gz
