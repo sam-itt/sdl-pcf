@@ -6,7 +6,6 @@ notes
 .clangd/
 compile_commands.json
 
-*.in
 *.pc
 config.*
 .deps
