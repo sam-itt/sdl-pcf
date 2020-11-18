@@ -19,6 +19,7 @@
 typedef void (*PixelLighter)(Uint8 *ptr, Uint32 color);
 
 static void filter_dedup(char *base, size_t len);
+static bool number_to_ascii(void *value, PCF_NumberType type, int8_t precision, char *buffer, size_t buffer_len);
 
 
 PCF_Font *PCF_FontInit(PCF_Font *self, const char *filename)
@@ -326,6 +327,61 @@ bool PCF_FontWriteAt(PCF_Font *font, const char *str, Uint32 color, SDL_Surface 
 
     return PCF_FontWrite(font, str, color, destination, &cursor);
 }
+
+/**
+ * @brief Writes a number
+ *
+ * Works just like PCF_FontWrite but avoid having to do a number->string
+ * conversion in the client code.
+ *
+ * @param font @see PCF_FontWrite
+ * @param value A pointer to the value to write. Can be either a pointer to:
+ * int, unsigned int, float, double.
+ * @param type Tell the function the type pointed by @p value, using one of
+ * PCF_NumberType enum values: TypeInt, TypeIntUnsigned, TypeFloat,
+ * TypeDouble.
+ * @param precision For int types, the padding to apply, if any. A padding of 2
+ * will make numbers below 10 to print as 01,02, etc. For floating-point types,
+ * the number of digits to truncate (NOT round) after. 3.141592 with precision=3
+ * is "3.141". If 0, the dot and the decimal part will be ignored, e.g 3.141592
+ * will be printed as "3".
+ * @param color @see PCF_FontWrite
+ * @param destination @see PCF_FontWrite
+ * @param location @see PCF_FontWrite
+ * @return False if the number->string conversion fails (SDL_GetError will give
+ * details on the failure) otherwise same behavior as PCF_FontWrite
+ */
+bool PCF_FontWriteNumber(PCF_Font *font, void *value, PCF_NumberType type, int8_t precision, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+{
+    char buffer[10]; /*9999999999 or 999999999 with a floating dot*/
+    if(!number_to_ascii(value, type, precision, buffer, 10))
+        return false;
+    return PCF_FontWrite(font, buffer, color, destination, location);
+}
+
+/**
+ * @brief Writes a number at a given location
+ *
+ * Works just like PCF_FontWriteNumber combined with PCF_FontWriteAt.
+ *
+ * @param font @see PCF_FontWriteAt
+ * @param value @see PCF_FontWriteNumber
+ * @param type @see PCF_FontWriteNumber
+ * @param precision @see PCF_FontWriteNumber
+ * @param color @see PCF_FontWriteAt
+ * @param destination @see PCF_FontWriteAt
+ * @param location @see PCF_FontWriteAt
+ * @return False if the number->string conversion fails (SDL_GetError will give
+ * details on the failure) otherwise same behavior as PCF_FontWriteAt
+ */
+bool PCF_FontWriteNumberAt(PCF_Font *font, void *value, PCF_NumberType type, int8_t precision, Uint32 color, SDL_Surface *destination, Uint32 col, Uint32 row, PCF_TextPlacement placement)
+{
+    char buffer[10]; /*9999999999 or 999999999 with a floating dot*/
+    if(!number_to_ascii(value, type, precision, buffer, 10))
+        return false;
+    return PCF_FontWriteAt(font, buffer, color, destination, col, row, placement);
+}
+
 
 /**
  * Writes a character on a SDL_Renderer, and advance the given location by one
@@ -825,7 +881,7 @@ void PCF_StaticFontCreateTexture(PCF_StaticFont *font)
 
 
 
-/**
+/*
  * Remove duplicates characters from base. base must be sorted
  * so that duplicates follow each other (i.e. use qsort() beforehand).
  *
@@ -847,3 +903,38 @@ static void filter_dedup(char *base, size_t len)
     }
 }
 
+/*
+ * Convert a number(int/float/etc) into a string buffer
+ * for printing
+ *
+ */
+static bool number_to_ascii(void *value, PCF_NumberType type, int8_t precision, char *buffer, size_t buffer_len)
+{
+    switch(type){
+        case TypeInt:
+            if(precision)
+                snprintf(buffer, buffer_len, "%.*d", precision, *(int *)value);
+            else
+                snprintf(buffer, buffer_len, "%d", *(int *)value);
+            break;
+        case TypeIntUnsigned:
+            if(precision)
+                snprintf(buffer, buffer_len, "%.*d", precision, *(unsigned int *)value);
+            else
+                snprintf(buffer, buffer_len, "%d", *(unsigned int *)value);
+            break;
+        case TypeFloat:
+            snprintf(buffer, buffer_len, "%.*f", precision >= 0 ? precision : 6, *(float *)value);
+            break;
+        case TypeDouble:
+            snprintf(buffer, buffer_len, "%.*f", precision >= 0 ? precision : 6, *(double *)value);
+            break;
+        default:
+            SDL_SetError("%s: Unknown value type: %d",
+                __FUNCTION__,
+                type
+            );
+            return false;
+    }
+    return true;
+}
