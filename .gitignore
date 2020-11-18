@@ -30,7 +30,7 @@ test/ayba-sf-gpu
 docs/build/
 test/simple-test
 test/simple-test-sf
-
+test/placement-test
 
 # Prerequisites
 *.d

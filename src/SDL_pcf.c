@@ -263,6 +263,71 @@ bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *d
 }
 
 /**
+ * @brief Same as PCF_FontWrite, expect that the meaning of location x and y
+ * start coordinates can be toggled with the subsquent parameters.
+ *
+ * @param str The string to write.
+ * @param font The font to use. Opened by PCF_OpenFont.
+ * @param color The color of text. Must be in @param destination format (use
+ * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
+ * @param destination The surface to write to.
+ * @param col The column to write relative to, see @p placement
+ * @param line The line to write relative to, see @p placement
+ * @param placement How to place the text relatively to given @p col and @p
+ * line, bitfield of one of RightToCol, CenterOnCol, LeftToCol and one of
+ * BelowRow, CenterOnRow, AboveRow.
+ * @return True on success(the whole string has been written), false on
+ * error/partial draw. Details of the failure can be retreived with
+ * SDL_GetError().
+ */
+bool PCF_FontWriteAt(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *destination, Uint32 col, Uint32 row, PCF_TextPlacement placement)
+{
+    bool rv;
+    int end;
+    SDL_Rect cursor = (SDL_Rect){0, 0, 0 ,0};
+    Uint32 width, height;
+
+    PCF_FontGetSizeRequest(font, str, &width, &height);
+
+    if(placement & RightToCol){
+        cursor.x = col;
+    }
+    else if(placement & CenterOnCol){
+        cursor.x = col - roundf((width - 1)/2.0f);
+    }else if(placement & LeftToCol){
+        cursor.x = col - (width - 1); /*-1: Land on x=col with the last char*/
+    }else{
+        SDL_SetError("%s: No setting for col placement in %d",
+            __FUNCTION__,
+            placement
+        );
+        return false;
+    }
+
+    if(placement & BelowRow){
+        cursor.y = row;
+    }else if(placement & CenterOnRow){
+        /*TODO: Check whether it's needed to compute a "string-wise" middle
+         *or if this is enough*/
+        int ink_ascent = PCF_FontInkMetrics(font)[0].ascent;
+        int empty_top_pix = PCF_FontMetrics(font).ascent - ink_ascent;
+        int glyph_middle = empty_top_pix + roundf(ink_ascent/2.0f);
+
+        cursor.y = row - glyph_middle;
+    }else if(placement & AboveRow){
+        cursor.y = row - height - 1;
+    }else{
+        SDL_SetError("%s: No setting for line placement in %d",
+            __FUNCTION__,
+            placement
+        );
+        return false;
+    }
+
+    return PCF_FontWrite(font, str, color, destination, &cursor);
+}
+
+/**
  * Writes a character on a SDL_Renderer, and advance the given location by one
  * char width.
  * If the renderer is too small to fit the char or if the glyph is partly out
