@@ -592,6 +592,14 @@ void PCF_FontDumpGlpyh(PCF_Font *font, int c)
     printf("\tdescent: %d\n",glyph->metrics.descent);
     printf("\tattributes: %d\n",glyph->metrics.attributes);
 
+    printf("Ink metrics:\n");
+    xCharInfo *ink = &bitmapFont->ink_metrics[c];
+    printf("\tleft side bearing: %d\n",ink->leftSideBearing);
+    printf("\tright side bearing: %d\n",ink->rightSideBearing);
+    printf("\twidth: %d\n",ink->characterWidth);
+    printf("\tascent: %d\n",ink->ascent);
+    printf("\tdescent: %d\n",ink->descent);
+    printf("\tattributes: %d\n",ink->attributes);
 
     /* FontRec.Glyph seems to be the line padding in number of bytes.
      * byte = 1, short = 2, int = 4
