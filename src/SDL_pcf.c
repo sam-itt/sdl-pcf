@@ -840,6 +840,8 @@ void PCF_StaticFontGetSizeRequestRect(PCF_StaticFont *font, const char *str, SDL
     int len;
 
     len = strlen(str);
+    rect->x = 0;
+    rect->y = 0;
     rect->w = font->metrics.characterWidth * len;
     rect->h = font->metrics.ascent + font->metrics.descent;
 }
