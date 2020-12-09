@@ -847,6 +847,54 @@ void PCF_StaticFontGetSizeRequestRect(PCF_StaticFont *font, const char *str, SDL
 }
 
 /**
+ * @brief Generate a set of areas to blit from/to in order to write @p str using @p font
+ *
+ * This function will generate up to @p npatches char patches at location @p patches. Each
+ * patch has two top-left corners of font widthxheight rectangles one being the source (blit from
+ * @p font->raster or @p font->texture) and the other destination (where to blit the char to have
+ * a continuous one-line string)
+ *
+ * @param font a PCF_StaticFont
+ * @param str the string to write
+ * @param len the length of the string to write, -1 to compute it.
+ * @p location of top-left start position the cursor or NULL to start at 0,0. If not NULL,
+ * this function will advance the location at the end of the string
+ * @p npatches size of @p patches. Must be the same size of str (spaces won't output a patch)
+ * @p patches pointer to a large enough array of PCF_StaticFontPatches
+ * @return number of patches actually written
+ */
+size_t PCF_StaticFontPreWriteString(PCF_StaticFont *font, int len, const char *str, SDL_Rect *location,
+                                    size_t npatches, PCF_StaticFontPatch *patches)
+{
+    size_t rv;
+    SDL_Rect glyph;
+    SDL_Rect *cursor;
+
+    cursor = location ? location : &(SDL_Rect){
+        .x = 0,
+        .y = 0,
+        .w = font->metrics.characterWidth,
+        .h = font->metrics.ascent + font->metrics.descent
+    };
+    cursor->w = font->metrics.characterWidth;
+
+    if(len < 0)
+        len = strlen(str);
+    rv = 0;
+    for(int i = 0; i < len && rv < npatches; i++){
+        if( PCF_StaticFontGetCharRect(font, str[i], &glyph) != 0){ /*0 means white space*/
+            /*h and w are implied as the values found in sfont->metrics*/
+            patches[rv].src = (SDL_Point){glyph.x, glyph.y};
+            patches[rv].dst = (SDL_Point){cursor->x, cursor->y};
+            rv++;
+        }
+        cursor->x += font->metrics.characterWidth;
+    }
+
+    return rv;
+}
+
+/**
  * Check whether @param font can be used to write all chars given in
  * @param sequence in color @param color.
  *
