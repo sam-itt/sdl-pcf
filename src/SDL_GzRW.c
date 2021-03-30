@@ -32,14 +32,14 @@ static Sint64 SDL_GzRW_seek(SDL_RWops *ctx, Sint64 offset, int whence)
 static size_t SDL_GzRW_read(SDL_RWops *ctx, void *ptr, size_t size, size_t maxnum)
 {
     if((size | maxnum) > SQRT_SIZE_MAX && size && maxnum > SIZE_MAX / size)
-        return SDL_SetError("Integer overflow while trying to read %d * %d bytes", size, maxnum);
+        return SDL_SetError("Integer overflow while trying to read %zu * %zu bytes", size, maxnum);
     return gzread(ctx_get_zfile(ctx), ptr, size * maxnum);
 }
 
 static size_t SDL_GzRW_write(SDL_RWops *ctx, const void *ptr, size_t size, size_t maxnum)
 {
     if((size | maxnum) > SQRT_SIZE_MAX && size && maxnum > SIZE_MAX / size)
-        return SDL_SetError("Integer overflow while trying to write %d * %d bytes", size, maxnum);
+        return SDL_SetError("Integer overflow while trying to write %zu * %zu bytes", size, maxnum);
     return gzwrite(ctx_get_zfile(ctx), ptr, size * maxnum);
 }
 
