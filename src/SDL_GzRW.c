@@ -9,7 +9,7 @@
 /* http://kqueue.org/blog/2012/03/16/fast-integer-overflow-detection/
  * https://github.com/ivmai/bdwgc/commit/83231d0ab5ed60015797c3d1ad9056295ac3b2bb
  * */
-#define SQRT_SIZE_MAX ((1U << (sizeof(size_t) * 8 / 2)) - 1)
+#define SQRT_SIZE_MAX (((size_t)(1) << (sizeof(size_t) * 8 / 2)) - 1)
 
 #define ctx_get_zfile(ctx) ((gzFile)(ctx)->hidden.unknown.data1)
 
