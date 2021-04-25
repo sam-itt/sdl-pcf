@@ -119,7 +119,14 @@ int main(int argc, char **argv)
         if( j < msglen){
             if(PCF_StaticFontGetCharRect(sfont, message[j], &glyph)){
                 g_glyph = (GPU_Rect){glyph.x, glyph.y, glyph.w, glyph.h};
-                GPU_Blit(sfont->texture, &g_glyph, gpu_screen, location.x, location.y);
+                GPU_Blit(sfont->texture, &g_glyph, gpu_screen,
+                    g_glyph.w/2.0 + location.x,
+                    g_glyph.h/2.0 + location.y
+                );
+                /* Not waiting before GPU_Flip'ing the first char will result
+                 * in chars being discarded. SDL_gpu bug? */
+                if(j == 0)
+                    SDL_Delay(500);
             }
             location.x += sfont->metrics.characterWidth;
             j++;
