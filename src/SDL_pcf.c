@@ -952,14 +952,17 @@ static void filter_dedup(char *base, size_t len)
 
     for(int i = 1; i < len; i++){
         if(base[i] == base[i-1]){
-            for(int j = i; j < len; j++){
-                /* Index doesn't go OOB, last iteration will
-                 * access (and move back) the final '\0' */
-                base[j] = base[j+1];
+            int next; /*Next different char idx*/
+            for(next = i; next < len && base[next] == base[i]; next++);
+            /* Index doesn't go OOB, last iteration will
+             * access (and move back) the final '\0' */
+            for(int j = next; j < len+1; j++){
+                base[i+(j-next)] = base[j];
             }
         }
     }
 }
+
 
 /*
  * Convert a number(int/float/etc) into a string buffer
