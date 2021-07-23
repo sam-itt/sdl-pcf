@@ -16,6 +16,12 @@
 #include "SDL_stdinc.h"
 #include "SDL_surface.h"
 
+#define SDLExt_RectLastX(rect) ((rect)->x + (rect)->w - 1)
+#define SDLExt_RectLastY(rect) ((rect)->y + (rect)->h - 1)
+#define SDLExt_RectMidY(rect) ((rect)->y + roundf(((rect)->h-1)/2.0f))
+#define SDLExt_RectMidX(rect) ((rect)->x + roundf(((rect)->w-1)/2.0f))
+
+
 typedef void (*PixelLighter)(Uint8 *ptr, Uint32 color);
 
 static void filter_dedup(char *base, size_t len);
@@ -893,6 +899,107 @@ size_t PCF_StaticFontPreWriteString(PCF_StaticFont *font, int len, const char *s
 
     return rv;
 }
+
+/**
+ * @brief Generate a set of areas to blit from/to in order to write @p str
+ * using @p font, with an optional offset.
+ *
+ * This function will generate up to @p npatches char patches at location
+ * @p patches. Each patch has a source SDL_Rect area (blit from  @p font->raster
+ * or @p font->texture) and an SDL_Point that represent the destination origin
+ * where to blit the char to have a continuous one-line string) width and height
+ * are already given in the src member.
+ *
+ * @param font a PCF_StaticFont
+ * @param str the string to write
+ * @param len the length of the string to write, -1 to compute it.
+ * @param location of top-left start position the cursor or NULL to start at 0,0.
+ * @param xoffset Offset in pixels relative to location. For example a -10 offset means that the string
+ * will be written as if it was moved to the left by 10 pixels. With a 12px wide font, only
+ * the last 2 pixels of the first glyph would be visible.
+ * @param npatches size of @p patches. Must of be the same size as str
+ * (spaces will output a patch with src.x and src.y both set to -1)
+ * @param patches pointer to a large enough array of PCF_StaticFontPartPatches
+ * @return number of patches actually written
+ */
+size_t PCF_StaticFontPreWriteStringOffset(PCF_StaticFont *font,
+                                          int len, const char *str,
+                                          SDL_Rect *location,
+                                          int xoffset, int yoffset,
+                                          size_t npatches, PCF_StaticFontRectPatch *patches)
+{
+    size_t rv;
+    SDL_Rect glyph;
+    SDL_Rect cursor;
+
+    cursor = (SDL_Rect){
+        .x = (location ? location->x : 0) + xoffset,
+        .y = (location ? location->y : 0) + yoffset,
+        .w = PCF_StaticFontCharWidth(font),
+        .h = PCF_StaticFontCharHeight(font)
+    };
+
+    if(len < 0)
+        len = strlen(str);
+    rv = 0;
+
+    int skip = abs(xoffset)/PCF_StaticFontCharWidth(font);
+    cursor.x += skip * PCF_StaticFontCharWidth(font);
+    for(int i = skip; i < len && rv < npatches; i++){
+        /*TODO SDLExt_RectAbove/Below/Before/After*/
+        if(   cursor.x > SDLExt_RectLastX(location)
+           || cursor.y > SDLExt_RectLastY(location))
+            break;
+
+        /*If we are there, there is an intersection*/
+        if( PCF_StaticFontGetCharRect(font, str[i], &glyph) != 0){ /*0 means white space*/
+            /*h and w are implied as the values found in sfont->metrics*/
+            patches[rv].src = (SDL_Rect){
+                glyph.x,
+                glyph.y,
+                glyph.w,
+                glyph.h
+            };
+        }else{
+            patches[rv].src = (SDL_Rect){
+                -1,
+                -1,
+                PCF_StaticFontCharWidth(font),
+                PCF_StaticFontCharHeight(font)
+            };
+        }
+        SDL_Rect intersect;
+        SDL_IntersectRect(&cursor, location, &intersect);
+
+        patches[rv].dst = (SDL_Point){intersect.x, intersect.y};
+        if(intersect.w < patches[rv].src.w){
+            if(cursor.x < location->x){
+                int delta = patches[rv].src.w - intersect.w;
+                patches[rv].src.x += delta;
+                patches[rv].src.w -= delta;
+            }else{
+                patches[rv].src.w = intersect.w;
+            }
+        }
+        /* TODO: Compute only once, line height won't change
+         * as we go xward*/
+        if(intersect.h < patches[rv].src.h){
+            if(cursor.y < location->y){
+                int delta = patches[rv].src.h - intersect.h;
+                patches[rv].src.y += delta;
+                patches[rv].src.h -= delta;
+            }else{
+                patches[rv].src.h = intersect.h;
+            }
+        }
+
+        cursor.x += PCF_StaticFontCharWidth(font);
+        rv++;
+    }
+
+    return rv;
+}
+
 
 /**
  * Check whether @param font can be used to write all chars given in
