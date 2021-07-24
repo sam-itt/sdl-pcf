@@ -12,6 +12,8 @@
 #define PCF_UPPER_CASE "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 #define PCF_ALPHA "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 #define PCF_DIGITS "0123456789"
+#define ASCII_PRINTABLE " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
+                        "[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 
 #define PCF_TEXTURE_SDL2 1
 #define PCF_TEXTURE_GPU 2
