@@ -87,6 +87,8 @@ bool PCF_FontRender(PCF_Font *font, const char *str, SDL_Color *color, SDL_Rende
 #define PCF_FontCharWidth(font) (PCF_FontMetrics(font).characterWidth)
 #define PCF_FontCharHeight(font) (PCF_FontMetrics(font).ascent + PCF_FontMetrics(font).descent)
 
+#define PCF_StaticFontCharWidth(font) ((font)->metrics.characterWidth)
+#define PCF_StaticFontCharHeight(font) ((font)->metrics.ascent + (font)->metrics.descent)
 
 PCF_StaticFont *PCF_FontCreateStaticFont(PCF_Font *font, SDL_Color *color, int nsets, ...);
 PCF_StaticFont *PCF_FontCreateStaticFontVA(PCF_Font *font, SDL_Color *color, int nsets, size_t tlen, va_list ap);
