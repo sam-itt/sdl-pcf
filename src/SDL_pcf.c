@@ -1005,7 +1005,9 @@ size_t PCF_StaticFontPreWriteStringOffset(PCF_StaticFont *font,
  * Check whether @param font can be used to write all chars given in
  * @param sequence in color @param color.
  *
- * @param color The color you want to write in
+ * @param color The color you want to write in. If NULL the function
+ * will assume that the desired color is the same as the font native
+ * color, i.e NULL is equivalent to &font->color.
  * @param sequence All the chars you may want to use
  * @return true if all chars of @param sequence can be written in
  * @param color, false otherwise.
@@ -1014,7 +1016,7 @@ bool PCF_StaticFontCanWrite(PCF_StaticFont *font, SDL_Color *color, const char *
 {
     int len;
 
-    if(memcmp(&font->text_color, color, sizeof(SDL_Color)) != 0){
+    if(color && memcmp(&font->text_color, color, sizeof(SDL_Color)) != 0){
         return false;
     }
 
