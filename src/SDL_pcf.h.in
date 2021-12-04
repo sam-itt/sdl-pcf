@@ -112,4 +112,29 @@ bool PCF_StaticFontCanWrite(PCF_StaticFont *font, SDL_Color *color, const char *
 void PCF_StaticFontCreateTexture(PCF_StaticFont *font @SFONT_CREATE_TEXTURE_ARGS@);
 
 void PCF_FontDumpGlpyh(PCF_Font *font, int c);
+
+static inline PCF_StaticFont *PCF_StaticFontRef(PCF_StaticFont *self)
+{
+    self->refcnt++;
+    return self;
+}
+
+static inline PCF_StaticFont *PCF_StaticFontUnref(PCF_StaticFont *self)
+{
+    self->refcnt--;
+    return self;
+}
+
+static inline PCF_Font *PCF_FontRef(PCF_Font *self)
+{
+    self->xfont.refcnt++;
+    return self;
+}
+
+static inline PCF_Font *PCF_FontUnref(PCF_Font *self)
+{
+    self->xfont.refcnt++;
+    return self;
+}
+
 #endif /* SDL_PCF_H */
