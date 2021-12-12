@@ -11,7 +11,7 @@
 #define PCF_LOWER_CASE "abcdefghijklmnopqrstuvwxyz"
 #define PCF_UPPER_CASE "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 #define PCF_ALPHA "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-#define PCF_DIGITS "0123456789"
+#define PCF_DIGITS "0123456789,.'\x8f"
 #define ASCII_PRINTABLE " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
                         "[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 
