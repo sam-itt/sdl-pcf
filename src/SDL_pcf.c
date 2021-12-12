@@ -140,7 +140,8 @@ static PixelLighter SDL_SurfaceGetLighter(SDL_Surface *surface)
  * drawn glyph and the function will return false.
  *
  * @param c The ASCII code of the char to write. You can of course use 'a'
- * instead of 97.
+ * instead of 97. Be sure to cast values to unsigned char when dealing with
+ * values over 127.
  * @param font The font to use to write the char. Opened by PCF_OpenFont.
  * @param color The color of text. Must be in @param destination format (use
  * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
@@ -262,7 +263,7 @@ bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *d
 
     rv = true;
     for(int i = 0; i < end; i++){
-        if(!PCF_FontWriteChar(font, str[i], color, destination, location))
+        if(!PCF_FontWriteChar(font, (unsigned char)str[i], color, destination, location))
             rv = false;
     }
 
