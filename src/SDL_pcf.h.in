@@ -133,7 +133,7 @@ static inline PCF_Font *PCF_FontRef(PCF_Font *self)
 
 static inline PCF_Font *PCF_FontUnref(PCF_Font *self)
 {
-    self->xfont.refcnt++;
+    self->xfont.refcnt--;
     return self;
 }
 
