@@ -8,7 +8,7 @@ libSDL2_pcfincludedir = $(includedir)/SDL2
 libSDL2_pcfinclude_HEADERS = pcfread.h \
 							 SDL_pcf.h
 
-libSDL2_pcf_la_CPPFLAGS = -I$(top_srcdir)/src  -I$(SDL2_CFLAGS)
+libSDL2_pcf_la_CPPFLAGS = -I$(top_srcdir)/src $(SDL2_CFLAGS)
 libSDL2_pcf_la_SOURCES = pcfread.c \
 						 utilbitmap.c \
 						 SDL_GzRW.c \
