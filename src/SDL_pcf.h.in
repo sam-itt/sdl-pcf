@@ -111,7 +111,7 @@ size_t PCF_StaticFontPreWriteStringOffset(PCF_StaticFont *font,
 bool PCF_StaticFontCanWrite(PCF_StaticFont *font, SDL_Color *color, const char *sequence);
 void PCF_StaticFontCreateTexture(PCF_StaticFont *font @SFONT_CREATE_TEXTURE_ARGS@);
 
-void PCF_FontDumpGlpyh(PCF_Font *font, int c);
+void PCF_FontDumpGlyph(PCF_Font *font, int c);
 
 static inline PCF_StaticFont *PCF_StaticFontRef(PCF_StaticFont *self)
 {

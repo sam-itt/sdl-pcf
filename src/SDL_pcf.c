@@ -574,7 +574,7 @@ void PCF_FontGetSizeRequestRect(PCF_Font *font, const char *str, SDL_Rect *rect)
  * @param font The font to work with.
  * @param c    The ascii code of the char to dump. Can use 'a' instead of 97.
  */
-void PCF_FontDumpGlpyh(PCF_Font *font, int c)
+void PCF_FontDumpGlyph(PCF_Font *font, int c)
 {
     int w, h;
     int line_bsize;
