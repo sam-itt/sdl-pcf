@@ -9,6 +9,7 @@ check_PROGRAMS += ayba-sf-gpu
 endif
 check_PROGRAMS += placement-test
 check_PROGRAMS += number-test
+check_PROGRAMS += glyph-dump
 AM_DEFAULT_SOURCE_EXT = .c
 
 EXTRA_DIST = simple-test.c simple-test-sf.c ter-x24n.pcf.gz
