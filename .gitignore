@@ -24,14 +24,16 @@ m4/
 missing
 stamp-h1
 src/SDL_pcf.h
+docs/build/
 test/ayba
 test/ayba-sf
 test/ayba-sf-gpu
-docs/build/
 test/simple-test
 test/simple-test-sf
 test/placement-test
 test/number-test
+test/glyph-dump
+test/text-sfpre-offset-gpu
 
 # Prerequisites
 *.d

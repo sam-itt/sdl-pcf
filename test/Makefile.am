@@ -6,6 +6,7 @@ AM_CPPFLAGS += $(SDL2_CFLAGS)
 check_PROGRAMS = ayba ayba-sf
 if USE_SGPU_TEXTURE
 check_PROGRAMS += ayba-sf-gpu
+check_PROGRAMS += text-sfpre-offset-gpu
 endif
 check_PROGRAMS += placement-test
 check_PROGRAMS += number-test

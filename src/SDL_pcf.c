@@ -944,7 +944,7 @@ size_t PCF_StaticFontPreWriteStringOffset(PCF_StaticFont *font,
         len = strlen(str);
     rv = 0;
 
-    int skip = abs(xoffset)/PCF_StaticFontCharWidth(font);
+    int skip = xoffset < 0 ? abs(xoffset)/PCF_StaticFontCharWidth(font) : 0;
     cursor.x += skip * PCF_StaticFontCharWidth(font);
     for(int i = skip; i < len && rv < npatches; i++){
         /*TODO SDLExt_RectAbove/Below/Before/After*/
@@ -976,7 +976,9 @@ size_t PCF_StaticFontPreWriteStringOffset(PCF_StaticFont *font,
         if(intersect.w < patches[rv].src.w){
             if(cursor.x < location->x){
                 int delta = patches[rv].src.w - intersect.w;
-                patches[rv].src.x += delta;
+                /*A negative start point (x,y) means a space. keep it*/
+                if(patches[rv].src.x >= 0)
+                    patches[rv].src.x += delta;
                 patches[rv].src.w -= delta;
             }else{
                 patches[rv].src.w = intersect.w;
@@ -987,7 +989,9 @@ size_t PCF_StaticFontPreWriteStringOffset(PCF_StaticFont *font,
         if(intersect.h < patches[rv].src.h){
             if(cursor.y < location->y){
                 int delta = patches[rv].src.h - intersect.h;
-                patches[rv].src.y += delta;
+                /*A negative start point (x,y) means a space. keep it*/
+                if(patches[rv].src.y >= 0)
+                    patches[rv].src.y += delta;
                 patches[rv].src.h -= delta;
             }else{
                 patches[rv].src.h = intersect.h;
