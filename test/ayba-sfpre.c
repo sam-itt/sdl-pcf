@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 {
     SDL_Window* window = NULL;
     SDL_Surface* screenSurface = NULL;
-    Uint32 black, white;
+    Uint32 black, white, blue;
     PCF_Font *font;
     PCF_StaticFont *sfont;
     SDL_Rect glyph;
@@ -109,6 +109,7 @@ int main(int argc, char **argv)
         }
         white = SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF);
         black  = SDL_MapRGB(screenSurface->format, 0x00, 0x00, 0x00);
+        blue  = SDL_MapRGB(screenSurface->format, 0x00, 0x00, 0xFF);
         SDL_FillRect(screenSurface, NULL, black);
     }
 
@@ -142,29 +143,37 @@ int main(int argc, char **argv)
 
     char *message = "All your bases are belong to us";
     int msglen = strlen(message);
-    PCF_StaticFontGetSizeRequest(sfont, message, false, &msg_w, &msg_h);
+    PCF_StaticFontGetSizeRequest(sfont, message, true, &msg_w, &msg_h);
+
+    PCF_StaticFontPatch *patches = SDL_calloc(msglen, sizeof(PCF_StaticFontPatch));
+
 
     SDL_Rect location = {SCREEN_WIDTH/2 -1, SCREEN_HEIGHT/2 -1,0 ,0};
     location.x -= (msg_w/2 -1);
     /*Ignored by SDL_BlitSurface, but required by SDL_Render*/
     location.w = sfont->metrics.characterWidth;
     location.h = sfont->metrics.ascent + sfont->metrics.descent;
+
+    SDL_Rect background = (SDL_Rect){location.x, location.y, msg_w, msg_h};
+    SDL_FillRect(screenSurface, &background, blue);
+
+    size_t npatches = PCF_StaticFontPreWriteString(sfont, msglen, message, true, &location, msglen, patches);
+
     int j = 0;
     do{
         ticks = SDL_GetTicks();
         elapsed = ticks - last_ticks;
 
         done = handle_events();
-        if( j < msglen){
-            if(PCF_StaticFontGetCharRect(sfont, message[j], &glyph)){
-                if(use_renderer){
+        if( j < npatches){
+            if(use_renderer){
 #if PCF_TEXTURE_TYPE == PCF_TEXTURE_SDL2
-                    SDL_RenderCopy(renderer, sfont->texture, &glyph, &location);
+                SDL_RenderCopy(renderer, sfont->texture, &patches[j].src, &(SDL_Rect){patches[j].dst.x, patches[j].dst.y});
 #endif
-                }else{
-                    SDL_BlitSurface(sfont->raster, &glyph, screenSurface, &location);
-                }
+            }else{
+                SDL_BlitSurface(sfont->raster, &patches[j].src, screenSurface, &(SDL_Rect){patches[j].dst.x, patches[j].dst.y});
             }
+
             location.x += sfont->metrics.characterWidth;
             j++;
         }

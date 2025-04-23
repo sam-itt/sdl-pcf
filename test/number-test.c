@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
         SDL_UnlockSurface(screenSurface);
 
         printf("%s - precision %d\n", pretty_type(samples[current_sample].type), current_precision);
-        PCF_FontWriteNumberAt(font, samples[current_sample].value, samples[current_sample].type, current_precision, white, screenSurface, col, row, placement);
+        PCF_FontWriteNumberAt(font, samples[current_sample].value, samples[current_sample].type, current_precision, white, false, screenSurface, col, row, placement);
         SDL_UpdateWindowSurface(window);
         done = handle_events();
     }while(!done);

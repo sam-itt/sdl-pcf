@@ -6,6 +6,8 @@
 #include <SDL_gpu.h>
 
 #include "SDL_pcf.h"
+#include "SDL_stdinc.h"
+#include "src/SDL_pcf.h.in"
 
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 480
@@ -55,7 +57,7 @@ int main(int argc, char **argv)
     PCF_Font *font;
     PCF_StaticFont *sfont;
     SDL_Rect glyph;
-    GPU_Rect g_glyph;
+    GPU_Rect glyph_grect;
     Uint32 msg_w,msg_h;
     bool done;
     int i;
@@ -105,17 +107,19 @@ int main(int argc, char **argv)
     int msglen = strlen(message);
     PCF_StaticFontGetSizeRequest(sfont, message, true, &msg_w, &msg_h);
 
+    PCF_StaticFontPatch *patches = SDL_calloc(msglen, sizeof(PCF_StaticFontPatch));
+
+
     SDL_Rect location = {SCREEN_WIDTH/2 -1, SCREEN_HEIGHT/2 -1,0 ,0};
     location.x -= (msg_w/2 -1);
-    /*Ignored by SDL_BlitSurface, but required by SDL_Render*/
     location.w = sfont->metrics.characterWidth;
-    location.h = sfont->metrics.ascent + sfont->metrics.descent;
+    location.h = msg_h;
 
     GPU_Rect str_bg = (GPU_Rect){location.x, location.y, msg_w, msg_h};
     GPU_Rectangle2(gpu_screen, str_bg, (SDL_Color){0,0,255,SDL_ALPHA_OPAQUE});
-#if 1
-    location.y -= PCF_StaticFontGetStringTopInkOffset(sfont, message);
-#endif
+
+
+    size_t npatches = PCF_StaticFontPreWriteString(sfont, msglen, message, true, &location, msglen, patches);
 
     int j = 0;
     do{
@@ -123,19 +127,20 @@ int main(int argc, char **argv)
         elapsed = ticks - last_ticks;
 
         done = handle_events();
-        if( j < msglen){
-            if(PCF_StaticFontGetCharRect(sfont, message[j], &glyph)){
-                g_glyph = (GPU_Rect){glyph.x, glyph.y, glyph.w, glyph.h};
-                GPU_Blit(sfont->texture, &g_glyph, gpu_screen,
-                    g_glyph.w/2.0 + location.x,
-                    g_glyph.h/2.0 + location.y
-                );
-                /* Not waiting before GPU_Flip'ing the first char will result
-                 * in chars being discarded. SDL_gpu bug? */
-                if(j == 0)
-                    SDL_Delay(500);
-            }
-            location.x += sfont->metrics.characterWidth;
+        if( j < npatches){
+            glyph_grect = (GPU_Rect){patches[j].src.x, patches[j].src.y, patches[j].src.w, patches[j].src.h};
+            float x,y;
+            x = glyph_grect.w/2.0 + patches[j].dst.x;
+            y = glyph_grect.h/2.0 + patches[j].dst.y;
+#if 0
+            printf("blit src: %0.2f, %0.2f, %0.2f, %0.2f\n",
+                glyph_grect.x, glyph_grect.y,
+                glyph_grect.w, glyph_grect.h
+            );
+            printf("blit dest: %0.2f, %0.2f\n",x,y);
+#endif
+            GPU_Blit(sfont->texture, &glyph_grect, gpu_screen, x, y);
+            SDL_Delay(500);
             j++;
         }
         GPU_Flip(gpu_screen);
@@ -147,5 +152,6 @@ int main(int argc, char **argv)
     }while(!done);
     PCF_FreeStaticFont(sfont);
     GPU_Quit();
+
     return 0;
 }

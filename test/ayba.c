@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 {
     SDL_Window* window = NULL;
     SDL_Surface* screenSurface = NULL;
-    Uint32 black, white;
+    Uint32 black, white, blue;
     PCF_Font *font;
     Uint32 msg_w,msg_h;
     bool done;
@@ -101,6 +101,7 @@ int main(int argc, char **argv)
         }
         white = SDL_MapRGB(screenSurface->format, 0xFF, 0xFF, 0xFF);
         black  = SDL_MapRGB(screenSurface->format, 0x00, 0x00, 0x00);
+        blue  = SDL_MapRGB(screenSurface->format, 0x00, 0x00, 0xFF);
         SDL_FillRect(screenSurface, NULL, black);
     }
 
@@ -117,11 +118,18 @@ int main(int argc, char **argv)
 
     char *message = "All your bases are belong to us";
     int msglen = strlen(message);
-    PCF_FontGetSizeRequest(font, message, &msg_w, &msg_h);
+    PCF_FontGetSizeRequest(font, message, true, &msg_w, &msg_h);
 
     SDL_Rect location = {SCREEN_WIDTH/2 -1, SCREEN_HEIGHT/2 -1,0 ,0};
     location.x -= (msg_w/2 -1);
+
+
     int j = 0;
+    SDL_Rect background = (SDL_Rect){location.x, location.y, msg_w, msg_h};
+#if 1
+    location.y -= PCF_FontGetStringTopInkOffset(font, message);
+#endif
+    SDL_FillRect(screenSurface, &background, blue);
     if(use_renderer)
         SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, SDL_ALPHA_OPAQUE);
     do{

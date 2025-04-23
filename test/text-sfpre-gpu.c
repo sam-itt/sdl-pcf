@@ -12,8 +12,6 @@
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 480
 
-int xoffset = 0;
-int yoffset = 0;
 
 /*Return true to quit the app*/
 bool handle_keyboard(SDL_KeyboardEvent *event)
@@ -22,18 +20,6 @@ bool handle_keyboard(SDL_KeyboardEvent *event)
         case SDLK_ESCAPE:
             if(event->state == SDL_PRESSED)
                 return true;
-            break;
-        case SDLK_LEFT:
-            xoffset--;
-            break;
-        case SDLK_RIGHT:
-            xoffset++;
-            break;
-        case SDLK_UP:
-            yoffset++;
-            break;
-        case SDLK_DOWN:
-            yoffset--;
             break;
     }
     return false;
@@ -140,58 +126,35 @@ int main(int argc, char **argv)
 
     SDL_Rect location = {SCREEN_WIDTH/2 -1, SCREEN_HEIGHT/2 -1,0 ,0};
     location.x -= (msg_w/2 -1);
-    location.w = msg_w /*sfont->metrics.characterWidth*/;
+    location.w = sfont->metrics.characterWidth;
     location.h = msg_h;
 
     GPU_Rect str_bg = (GPU_Rect){location.x, location.y, msg_w, msg_h};
     GPU_RectangleFilled2(gpu_screen, str_bg, (SDL_Color){0,0,255,SDL_ALPHA_OPAQUE});
 
 
-   /*size_t npatches =  PCF_StaticFontPreWriteString(sfont, msglen, message, tight, &location, msglen, patches);*/
-    size_t npatches = PCF_StaticFontPreWriteStringOffset(sfont,
-                                          msglen, message,
-                                          tight, &location,
-                                          0, 0,
-                                          msglen, patches);
-   printf("npatches: %d\n", npatches);
-    bool dirty = true;
+    size_t npatches = PCF_StaticFontPreWriteString(sfont, msglen, message, tight, &location, msglen, patches);
+
+    int j = 0;
     do{
         ticks = SDL_GetTicks();
         elapsed = ticks - last_ticks;
-        int oldxoffset, oldyoffset;
 
-        oldxoffset = xoffset;
-        oldyoffset = yoffset;
         done = handle_events();
-        if(dirty || oldxoffset != xoffset || oldyoffset != yoffset){
-            printf("xoffset: %d, yoffset: %d\n",xoffset, yoffset);
-            SDL_Rect loc = location;
-            GPU_RectangleFilled2(gpu_screen, str_bg, (SDL_Color){0,0,255,SDL_ALPHA_OPAQUE});
-            /*size_t npatches =  PCF_StaticFontPreWriteString(sfont, msglen, message, tight, &loc, msglen, patches);*/
-            size_t npatches = PCF_StaticFontPreWriteStringOffset(sfont,
-                                                                msglen, message,
-                                                                tight, &location,
-                                                                xoffset, yoffset,
-                                                                msglen, patches);
-            for(int j = 0; j < npatches; j++ ){
-//                printf("Rendering patch %d/%d: (x:%d, y:%d, w:%d, h:%d)\n",j, npatches, patches[j].src.x, patches[j].src.y, patches[j].src.w, patches[j].src.h);
-                if(patches[j].src.x < 0) continue;
-                glyph_grect = (GPU_Rect){patches[j].src.x, patches[j].src.y, patches[j].src.w, patches[j].src.h};
-                float x,y;
-                x = glyph_grect.w/2.0 + patches[j].dst.x;
-                y = glyph_grect.h/2.0 + patches[j].dst.y;
+        if( j < npatches){
+            glyph_grect = (GPU_Rect){patches[j].src.x, patches[j].src.y, patches[j].src.w, patches[j].src.h};
+            float x,y;
+            x = glyph_grect.w/2.0 + patches[j].dst.x;
+            y = glyph_grect.h/2.0 + patches[j].dst.y;
 
-                GPU_Blit(sfont->texture, &glyph_grect, gpu_screen, x, y);
-                /*if(j == 0)*/
-                    /*SDL_Delay(400);*/
-
-                /*printf("patch[%d]: src: %0.2f %0.2f %0.2f %0.2f dst: %0.2f %0.2f\n", j, glyph_grect.x,glyph_grect.y,glyph_grect.w,glyph_grect.h,x,y);*/
-            }
-            GPU_Flip(gpu_screen);
-            dirty = false;
+            GPU_Blit(sfont->texture, &glyph_grect, gpu_screen, x, y);
+            j++;
         }
+        GPU_Flip(gpu_screen);
 
-
+        if(elapsed < 400){
+            SDL_Delay(400 - elapsed);
+        }
         last_ticks = ticks;
     }while(!done);
     PCF_FreeStaticFont(sfont);

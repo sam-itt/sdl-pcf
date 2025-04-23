@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
         SDL_UnlockSurface(screenSurface);
 
         pretty_placement(placement);
-        PCF_FontWriteAt(font, "Hello, World!", white, screenSurface, col, row, placement);
+        PCF_FontWriteAt(font, "Hello, World!", white, false, screenSurface, col, row, placement);
         SDL_UpdateWindowSurface(window);
         done = handle_events();
     }while(!done);

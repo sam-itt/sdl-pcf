@@ -21,6 +21,16 @@
 #define SDLExt_RectMidY(rect) ((rect)->y + roundf(((rect)->h-1)/2.0f))
 #define SDLExt_RectMidX(rect) ((rect)->x + roundf(((rect)->w-1)/2.0f))
 
+#ifdef MAX
+#undef MAX
+#endif
+#define MAX(a,b)             \
+({                           \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a > _b ? _a : _b;       \
+})
+
 
 typedef void (*PixelLighter)(Uint8 *ptr, Uint32 color);
 
@@ -207,7 +217,10 @@ bool PCF_FontWriteChar(PCF_Font *font, int c, Uint32 color, SDL_Surface *destina
     SDL_LockSurface(destination);
     for(int i = 0; i < h; i++){
         glyph_line = (unsigned char*)glyph->bits + (i * line_bsize);
-        line_y = location->y+i < destination->h ? location->y+i : destination->h-1; /*clip y*/
+        line_y = location->y+i;
+        /*clip y both ways*/
+        if(line_y > destination->h-1) break;
+        if(line_y < 0) continue;
         line_start = (Uint8 *)destination->pixels + (line_y * destination->pitch);
         pixels = line_start + location->x * destination->format->BytesPerPixel;
         xlimit = line_start + destination->w * destination->format->BytesPerPixel;
@@ -240,13 +253,15 @@ end:
  * @param font The font to use. Opened by PCF_OpenFont.
  * @param color The color of text. Must be in @param destination format (use
  * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
+ * @param tight If true, the rendering will use ink metrics (tight bounding box) instead
+ * of full font metrics. This trims empty space above and below the text.
  * @param destination The surface to write to.
  * @param location Where to write on the surface. Can be NULL to write at
  * 0,0. If not NULL, location will be advanced by the width of the string.
  * @return True on success(the whole string has been written), false on error/partial
  * draw. Details of the failure can be retreived with SDL_GetError().
  */
-bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, bool tight, SDL_Surface *destination, SDL_Rect *location)
 {
     bool rv;
     int end;
@@ -260,6 +275,11 @@ bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *d
     end = strlen(str);
     if(!location)
         location = &cursor;
+
+    if(tight){
+        Uint32 offset = PCF_FontGetStringTopInkOffset(font, str);
+        location->y -= offset;
+    }
 
     rv = true;
     for(int i = 0; i < end; i++){
@@ -278,6 +298,8 @@ bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *d
  * @param font The font to use. Opened by PCF_OpenFont.
  * @param color The color of text. Must be in @param destination format (use
  * SDL_MapRGB/SDL_MapRGBA to build a suitable value).
+ * @param tight If true, the rendering will use ink metrics (tight bounding box) instead
+ * of full font metrics. This trims empty space above and below the text.
  * @param destination The surface to write to.
  * @param col The column to write relative to, see @p placement
  * @param line The line to write relative to, see @p placement
@@ -288,14 +310,14 @@ bool PCF_FontWrite(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *d
  * error/partial draw. Details of the failure can be retreived with
  * SDL_GetError().
  */
-bool PCF_FontWriteAt(PCF_Font *font, const char *str, Uint32 color, SDL_Surface *destination, Uint32 col, Uint32 row, PCF_TextPlacement placement)
+bool PCF_FontWriteAt(PCF_Font *font, const char *str, Uint32 color, bool tight, SDL_Surface *destination, Uint32 col, Uint32 row, PCF_TextPlacement placement)
 {
     bool rv;
     int end;
     SDL_Rect cursor = (SDL_Rect){0, 0, 0 ,0};
     Uint32 width, height;
 
-    PCF_FontGetSizeRequest(font, str, &width, &height);
+    PCF_FontGetSizeRequest(font, str, tight, &width, &height);
 
     if(placement & RightToCol){
         cursor.x = col;
@@ -315,9 +337,7 @@ bool PCF_FontWriteAt(PCF_Font *font, const char *str, Uint32 color, SDL_Surface 
     if(placement & BelowRow){
         cursor.y = row;
     }else if(placement & CenterOnRow){
-        /*TODO: Check whether it's needed to compute a "string-wise" middle
-         *or if this is enough*/
-        int ink_ascent = PCF_FontInkMetrics(font)[0].ascent;
+        int ink_ascent = PCF_FontGetStringMaxInkAscent(font, str);
         int empty_top_pix = PCF_FontMetrics(font).ascent - ink_ascent;
         int glyph_middle = empty_top_pix + roundf(ink_ascent/2.0f);
 
@@ -332,7 +352,7 @@ bool PCF_FontWriteAt(PCF_Font *font, const char *str, Uint32 color, SDL_Surface 
         return false;
     }
 
-    return PCF_FontWrite(font, str, color, destination, &cursor);
+    return PCF_FontWrite(font, str, color, tight, destination, &cursor);
 }
 
 /**
@@ -353,17 +373,19 @@ bool PCF_FontWriteAt(PCF_Font *font, const char *str, Uint32 color, SDL_Surface 
  * is "3.141". If 0, the dot and the decimal part will be ignored, e.g 3.141592
  * will be printed as "3".
  * @param color @see PCF_FontWrite
+ * @param tight If true, the rendering will use ink metrics (tight bounding box) instead
+ * of full font metrics. This trims empty space above and below the text.
  * @param destination @see PCF_FontWrite
  * @param location @see PCF_FontWrite
  * @return False if the number->string conversion fails (SDL_GetError will give
  * details on the failure) otherwise same behavior as PCF_FontWrite
  */
-bool PCF_FontWriteNumber(PCF_Font *font, void *value, PCF_NumberType type, int8_t precision, Uint32 color, SDL_Surface *destination, SDL_Rect *location)
+bool PCF_FontWriteNumber(PCF_Font *font, void *value, PCF_NumberType type, int8_t precision, Uint32 color, bool tight, SDL_Surface *destination, SDL_Rect *location)
 {
     char buffer[10]; /*9999999999 or 999999999 with a floating dot*/
     if(!number_to_ascii(value, type, precision, buffer, 10))
         return false;
-    return PCF_FontWrite(font, buffer, color, destination, location);
+    return PCF_FontWrite(font, buffer, color, tight, destination, location);
 }
 
 /**
@@ -376,17 +398,19 @@ bool PCF_FontWriteNumber(PCF_Font *font, void *value, PCF_NumberType type, int8_
  * @param type @see PCF_FontWriteNumber
  * @param precision @see PCF_FontWriteNumber
  * @param color @see PCF_FontWriteAt
+ * @param tight @see PCF_FontWriteAt
  * @param destination @see PCF_FontWriteAt
  * @param location @see PCF_FontWriteAt
  * @return False if the number->string conversion fails (SDL_GetError will give
  * details on the failure) otherwise same behavior as PCF_FontWriteAt
  */
-bool PCF_FontWriteNumberAt(PCF_Font *font, void *value, PCF_NumberType type, int8_t precision, Uint32 color, SDL_Surface *destination, Uint32 col, Uint32 row, PCF_TextPlacement placement)
+bool PCF_FontWriteNumberAt(PCF_Font *font, void *value, PCF_NumberType type, int8_t precision, Uint32 color, bool tight, SDL_Surface *destination, Uint32 col, Uint32 row, PCF_TextPlacement placement)
 {
     char buffer[10]; /*9999999999 or 999999999 with a floating dot*/
     if(!number_to_ascii(value, type, precision, buffer, 10))
         return false;
-    return PCF_FontWriteAt(font, buffer, color, destination, col, row, placement);
+
+    return PCF_FontWriteAt(font, buffer, color, tight, destination, col, row, placement);
 }
 
 
@@ -457,7 +481,9 @@ bool PCF_FontRenderChar(PCF_Font *font, int c, SDL_Renderer *renderer, SDL_Rect 
     for(int i = 0; i < h; i++){
         glyph_line = (unsigned char*)glyph->bits + (i * line_bsize);
         y = location->y+i;
-        if(y > rh) continue; /*clip y*/
+        /*clip y both ways*/
+        if(y < 0) continue;
+        if(y > rh-1) break;
         x = location->x;
         for(int j = 0; j < nbytes; j++){
             byte = *(unsigned char*)(glyph_line + j);
@@ -487,13 +513,15 @@ end:
  * @param font The font to use. Opened by PCF_OpenFont.
  * @param color The color of text. If not NULL, it will overrede the current
  * renderer's color. If NULL, the current renderer's color will be used.
+ * @param tight If true, the rendering will use ink metrics (tight bounding box)
+ * instead of full font metrics. This trims empty space above and below the text.
  * @param renderer The rendering context to use.
  * @param location Where to write on the renderer. Can be NULL to write at
  * 0,0. If not NULL, location will be advanced by the width of the string.
  * @return True on success(the whole string has been written), false on error/partial
  * draw. Details of the failure can be retreived with SDL_GetError().
  */
-bool PCF_FontRender(PCF_Font *font, const char *str, SDL_Color *color, SDL_Renderer *renderer, SDL_Rect *location)
+bool PCF_FontRender(PCF_Font *font, const char *str, SDL_Color *color, bool tight, SDL_Renderer *renderer, SDL_Rect *location)
 {
     bool rv;
     int end;
@@ -511,6 +539,11 @@ bool PCF_FontRender(PCF_Font *font, const char *str, SDL_Color *color, SDL_Rende
     if(color)
         SDL_SetRenderDrawColor(renderer, color->r, color->g, color->b, color->a);
 
+    if(tight){
+        Uint32 offset = PCF_FontGetStringTopInkOffset(font, str);
+        location->y -= offset;
+    }
+
     rv = true;
     for(int i = 0; i < end; i++){
         if(!PCF_FontRenderChar(font, str[i], renderer, location))
@@ -521,26 +554,100 @@ bool PCF_FontRender(PCF_Font *font, const char *str, SDL_Color *color, SDL_Rende
 }
 
 /**
+ * Computes the maximun height from baseline for a given string.
+ * The would be 8 for the example given in PCF_FontGetStringTopInkOffset.
+ *
+ * @param font The font you want to use to write that string
+ * @param str The string to write.
+ *
+ * @returns the height
+ */
+Uint32 PCF_FontGetStringMaxInkAscent(PCF_Font *font, const char *str)
+{
+    int len;
+    BitmapFontRec *bitmapFont;
+    int rv;
+
+    len = strlen(str);
+
+    rv = 0;
+    bitmapFont  = font->xfont.fontPrivate;
+    for(int i = 0; i < len; i++){
+        int c = (unsigned char)str[i];
+        if(c >= bitmapFont->num_chars) continue;
+        rv = MAX(rv, PCF_FontInkMetrics(font)[c].ascent);
+    }
+    return rv;
+}
+
+/**
+ * Computes the number of empty pixel rows above the topmost inked row for a
+ * given string. For example for the "Pcf" string written in Terminus 12, that
+ * would be 2. As you can see the number of empty pixel lines is two:
+ *
+ * ........ ........ ........
+ * ........ ........ ........
+ * ####.... ........ ...##...
+ * #...#... ........ ..#.....
+ * #...#... .###.... .###....
+ * #...#... #...#... ..#.....
+ * ####.... #....... ..#.....
+ * #....... #....... ..#.....
+ * #....... #...#... ..#.....
+ * #....... .###.... ..#.....
+ * ........ ........ ........
+ * ........ ........ ........
+ *
+ * @param font The font you want to use to write that string
+ * @param str The string to write.
+ *
+ * @returns the offset
+ */
+Uint32 PCF_FontGetStringTopInkOffset(PCF_Font *font, const char *str)
+{
+    return PCF_FontMetrics(font).ascent - PCF_FontGetStringMaxInkAscent(font, str);
+}
+
+/**
  * Computes space (pixels width*height) needed to draw a string using a given
  * font. Both @param w and @param h can be NULL depending on which metric you
  * are interested in. The function won't fail if both are NULL, it'll just be
  * useless.
  *
  * @param str The string whose size you need to know.
+ * @param tight If true, the rendering will use ink metrics (tight bounding box)
+ * instead of full font metrics. This trims empty space above and below the text.
  * @param font The font you want to use to write that string
+ * @param narrow Removes unused space at the top of the glyphs, if applicable.
  * @param w Pointer to somewhere to place the resulting width. Can be NULL.
  * @param h Pointer to somewhere to place the resulting height. Can be NULL.
  *
  */
-void PCF_FontGetSizeRequest(PCF_Font *font, const char *str, Uint32 *w, Uint32 *h)
+void PCF_FontGetSizeRequest(PCF_Font *font, const char *str, bool tight, Uint32 *w, Uint32 *h)
 {
     int len;
 
     len = strlen(str);
     if(w)
         *w = font->xfont.fontPrivate->metrics->metrics.characterWidth * len;
-    if(h)
-        *h = font->xfont.fontPrivate->metrics->metrics.ascent + font->xfont.fontPrivate->metrics->metrics.descent;
+    if(h){
+        if(tight){
+            int ascent_max = 0;
+            int descent_max = 0;
+
+            BitmapFontRec *bitmapFont;
+            bitmapFont  = font->xfont.fontPrivate;
+            for(int i = 0; i < len; i++){
+                int c = str[i];
+                if(c >= bitmapFont->num_chars) continue;
+                ascent_max = MAX(ascent_max, PCF_FontInkMetrics(font)[c].ascent);
+                descent_max = MAX(descent_max, PCF_FontInkMetrics(font)[c].descent);
+            }
+            *h = ascent_max + descent_max;
+        }else{
+            *h = font->xfont.fontPrivate->metrics->metrics.ascent + font->xfont.fontPrivate->metrics->metrics.descent;
+        }
+    }
 }
 
 
@@ -549,20 +656,23 @@ void PCF_FontGetSizeRequest(PCF_Font *font, const char *str, Uint32 *w, Uint32 *
  * get initialized to 0.
  *
  * @param str The string whose size you need to know.
+ * @param tight If true, the rendering will use ink metrics (tight bounding box)
+ * instead of full font metrics. This trims empty space above and below the text.
  * @param font The font you want to use to write that string
+ * @param narrow Removes unused space at the top of the glyphs, if applicable.
  * @param rect Pointer to an existing SDL_Rect (cannot be NULL) to fill with
  * the size request.
  */
-void PCF_FontGetSizeRequestRect(PCF_Font *font, const char *str, SDL_Rect *rect)
+void PCF_FontGetSizeRequestRect(PCF_Font *font, const char *str, bool tight, SDL_Rect *rect)
 {
-    int len;
+    Uint32 w, h;
 
-    len = strlen(str);
+    PCF_FontGetSizeRequest(font, str, tight, &w, &h);
 
     rect->x = 0;
     rect->y = 0;
-    rect->w = font->xfont.fontPrivate->metrics->metrics.characterWidth * len;
-    rect->h = font->xfont.fontPrivate->metrics->metrics.ascent + font->xfont.fontPrivate->metrics->metrics.descent;
+    rect->w = w;
+    rect->h = h;
 }
 
 
@@ -710,6 +820,7 @@ PCF_StaticFont *PCF_FontCreateStaticFontVA(PCF_Font *font, SDL_Color *color, int
 
     rv->nglyphs = tlen;
     rv->glyphs = SDL_calloc(rv->nglyphs + 1, sizeof(char));
+    rv->glyph_heights = SDL_calloc(rv->nglyphs, sizeof(InkHeight));
 
     iter = rv->glyphs;
     for(int i = 0; i < nsets; i++){
@@ -718,7 +829,7 @@ PCF_StaticFont *PCF_FontCreateStaticFontVA(PCF_Font *font, SDL_Color *color, int
         iter += strlen(tmp);
     }
 
-    PCF_FontGetSizeRequest(font, rv->glyphs, &w, &h);
+    PCF_FontGetSizeRequest(font, rv->glyphs, false, &w, &h);
     /*The static font will hold an implicit default glyph at it's very end*/
     w += font->xfont.fontPrivate->pDefault->metrics.characterWidth;
     /*Creates a 32bit surface by default which might be overkill*/
@@ -730,9 +841,17 @@ PCF_StaticFont *PCF_FontCreateStaticFontVA(PCF_Font *font, SDL_Color *color, int
     filter_dedup(rv->glyphs, rv->nglyphs);
 
     rv->metrics = font->xfont.fontPrivate->metrics->metrics;
+    for(int i = 0; i < rv->nglyphs; i++){
+        int c = (unsigned char)rv->glyphs[i];
+        rv->glyph_heights[i] = (InkHeight){
+            .ascent = PCF_FontInkMetrics(font)[c].ascent,
+            .descent = PCF_FontInkMetrics(font)[c].descent
+        };
+    }
+
     PCF_FontWrite(
         font, rv->glyphs,
-        col,
+        col, false,
         rv->raster, NULL
     );
     PCF_FontWriteChar(font, -1, col, rv->raster, &(SDL_Rect){
@@ -770,6 +889,26 @@ void PCF_FreeStaticFont(PCF_StaticFont *self)
 }
 
 /**
+ * Finds the index of a given char. Internal use only.
+ *
+ * @param font The static font to search in.
+ * @param c    The char to search for.
+ *
+ * @return the index or -1 if not found
+ */
+static inline int PCF_StaticFontGetGlyphIndex(PCF_StaticFont *font, int c)
+{
+    int i;
+
+    for(i = 0; i < font->nglyphs; i++){
+        if(font->glyphs[i] == c)
+            return i;
+    }
+
+    return -1;
+}
+
+/**
  * Find the area in self->raster holding a glyph for c. The area is
  * suitable for a SDL_BlitSurface or a SDL_RenderCopy operation using
  * self->raster as a source
@@ -790,13 +929,12 @@ int PCF_StaticFontGetCharRect(PCF_StaticFont *font, int c, SDL_Rect *glyph)
         return 0;
 
     rv = 1;
-    for(i = 0; i < font->nglyphs; i++){
-        if(font->glyphs[i] == c)
-            break;
-    }
-
-    if(i == font->nglyphs) /*Sets the error, i now points to the implicit default char*/
+    i = PCF_StaticFontGetGlyphIndex(font, c);
+    if(i < 0){
         rv = SDL_SetError("%s: %c: glpyh not found in font %p",__FUNCTION__, c, font);
+        /*make i point to the implicit default char*/
+        i = font->nglyphs;
+    }
 
     /*The raster is a single glpyh height: All glyphs
      * begin at 0,0 and end at raster->h-1 (height-wise)*/
@@ -817,20 +955,39 @@ int PCF_StaticFontGetCharRect(PCF_StaticFont *font, int c, SDL_Rect *glyph)
  * useless.
  *
  * @param str The string whose size you need to know.
+ * @param tight If true, the rendering will use ink metrics (tight bounding box)
+ * instead of full font metrics. This trims empty space above and below the text.
  * @param font The font you want to use to write that string
  * @param w Pointer to somewhere to place the resulting width. Can be NULL.
  * @param h Pointer to somewhere to place the resulting height. Can be NULL.
  *
  */
-void PCF_StaticFontGetSizeRequest(PCF_StaticFont *font, const char *str, Uint32 *w, Uint32 *h)
+void PCF_StaticFontGetSizeRequest(PCF_StaticFont *font, const char *str, bool tight, Uint32 *w, Uint32 *h)
 {
     int len;
 
     len = strlen(str);
     if(w)
         *w = font->metrics.characterWidth * len;
-    if(h)
-        *h = font->metrics.ascent + font->metrics.descent;
+    if(h){
+        if(tight){
+            int ascent_max = 0;
+            int descent_max = 0;
+
+            BitmapFontRec *bitmapFont;
+            for(int i = 0; i < len; i++){
+                int glyph_index = PCF_StaticFontGetGlyphIndex(font, str[i]);
+                if(glyph_index < 0) continue;
+                ascent_max = MAX(ascent_max, font->glyph_heights[glyph_index].ascent);
+                descent_max = MAX(descent_max, font->glyph_heights[glyph_index].descent);
+            }
+            *h = ascent_max + descent_max;
+        }else{
+            *h = font->metrics.ascent + font->metrics.descent;
+        }
+    }
+
+
 }
 
 /**
@@ -838,20 +995,61 @@ void PCF_StaticFontGetSizeRequest(PCF_StaticFont *font, const char *str, Uint32 
  * get initialized to 0.
  *
  * @param str The string whose size you need to know.
+ * @param tight If true, the rendering will use ink metrics (tight bounding box)
+ * instead of full font metrics. This trims empty space above and below the text.
  * @param font The font you want to use to write that string
  * @param rect Pointer to an existing SDL_Rect (cannot be NULL) to fill with
  * the size request.
  */
-void PCF_StaticFontGetSizeRequestRect(PCF_StaticFont *font, const char *str, SDL_Rect *rect)
+void PCF_StaticFontGetSizeRequestRect(PCF_StaticFont *font, const char *str, bool tight, SDL_Rect *rect)
 {
-    int len;
+    Uint32 w, h;
 
-    len = strlen(str);
+    PCF_StaticFontGetSizeRequest(font, str, tight, &w, &h);
+
     rect->x = 0;
     rect->y = 0;
-    rect->w = font->metrics.characterWidth * len;
-    rect->h = font->metrics.ascent + font->metrics.descent;
+    rect->w = w;
+    rect->h = h;
 }
+
+/**
+ * @see PCF_FontGetStringMaxInkAscent
+ *
+ * @param font The font you want to use to write that string
+ * @param str The string to write.
+ *
+ * @returns the height
+ */
+Uint32 PCF_StaticFontGetStringMaxInkAscent(PCF_StaticFont *font, const char *str)
+{
+    int len;
+    int rv;
+
+    len = strlen(str);
+
+    rv = 0;
+    for(int i = 0; i < len; i++){
+        int glyph_index = PCF_StaticFontGetGlyphIndex(font, (unsigned char)str[i]);
+        if(glyph_index < 0) continue;
+        rv = MAX(rv, font->glyph_heights[glyph_index].ascent);
+    }
+    return rv;
+}
+
+/**
+ * See PCF_FontGetStringTopInkOffset.
+ *
+ * @param font The font you want to use to write that string
+ * @param str The string to write.
+ *
+ * @returns the offset
+ */
+Uint32 PCF_StaticFontGetStringTopInkOffset(PCF_StaticFont *font, const char *str)
+{
+    return font->metrics.ascent - PCF_StaticFontGetStringMaxInkAscent(font, str);
+}
+
 
 /**
  * @brief Generate a set of areas to blit from/to in order to write @p str using @p font
@@ -863,39 +1061,51 @@ void PCF_StaticFontGetSizeRequestRect(PCF_StaticFont *font, const char *str, SDL
  *
  * @param font a PCF_StaticFont
  * @param str the string to write
+ * @param tight If true, the rendering will use ink metrics (tight bounding box) instead
+ * of full font metrics. This trims empty space above and below the text.
  * @param len the length of the string to write, -1 to compute it.
  * @p location of top-left start position the cursor or NULL to start at 0,0. If not NULL,
- * this function will advance the location at the end of the string
+ * this function will advance the location at the end of the string and size it to the maximum
+ * area used by one glyph.
  * @p npatches size of @p patches. Must be the same size of str (spaces won't output a patch)
  * @p patches pointer to a large enough array of PCF_StaticFontPatches
  * @return number of patches actually written
  */
-size_t PCF_StaticFontPreWriteString(PCF_StaticFont *font, int len, const char *str, SDL_Rect *location,
-                                    size_t npatches, PCF_StaticFontPatch *patches)
+size_t PCF_StaticFontPreWriteString(PCF_StaticFont *font, int len, const char *str, bool tight,
+                                    SDL_Rect *location, size_t npatches, PCF_StaticFontPatch *patches)
 {
     size_t rv;
     SDL_Rect glyph;
     SDL_Rect *cursor;
+    Uint32 offset;
+
+    offset = tight ? PCF_StaticFontGetStringTopInkOffset(font, str) : 0;
 
     cursor = location ? location : &(SDL_Rect){
         .x = 0,
-        .y = 0,
-        .w = font->metrics.characterWidth,
-        .h = font->metrics.ascent + font->metrics.descent
+        .y = 0
     };
-    cursor->w = font->metrics.characterWidth;
+    /* We don't use these values in the function but set them for the calling code
+     * to know what we have done
+     */
+    cursor->w = PCF_StaticFontCharWidth(font);
+    cursor->h = PCF_StaticFontCharHeight(font) - offset;
 
     if(len < 0)
         len = strlen(str);
     rv = 0;
     for(int i = 0; i < len && rv < npatches; i++){
         if( PCF_StaticFontGetCharRect(font, str[i], &glyph) != 0){ /*0 means white space*/
-            /*h and w are implied as the values found in sfont->metrics*/
-            patches[rv].src = (SDL_Point){glyph.x, glyph.y};
+            patches[rv].src = (SDL_Rect){
+                glyph.x,
+                glyph.y + offset,
+                glyph.w,
+                glyph.h - offset
+            };
             patches[rv].dst = (SDL_Point){cursor->x, cursor->y};
             rv++;
         }
-        cursor->x += font->metrics.characterWidth;
+        cursor->x += PCF_StaticFontCharWidth(font);
     }
 
     return rv;
@@ -913,11 +1123,13 @@ size_t PCF_StaticFontPreWriteString(PCF_StaticFont *font, int len, const char *s
  *
  * @param font a PCF_StaticFont
  * @param str the string to write
+ * @param tight If true, the rendering will use ink metrics (tight bounding box)
+ * instead of full font metrics. This trims empty space above and below the text.
  * @param len the length of the string to write, -1 to compute it.
  * @param location of top-left start position the cursor or NULL to start at 0,0.
- * @param xoffset Offset in pixels relative to location. For example a -10 offset means that the string
- * will be written as if it was moved to the left by 10 pixels. With a 12px wide font, only
- * the last 2 pixels of the first glyph would be visible.
+ * @param xoffset Offset in pixels relative to location. For example a -10 offset
+ * means that the string will be written as if it was moved to the left by 10 pixels.
+ * With a 12px wide font, only the last 2 pixels of the first glyph would be visible.
  * @param npatches size of @p patches. Must of be the same size as str
  * (spaces will output a patch with src.x and src.y both set to -1)
  * @param patches pointer to a large enough array of PCF_StaticFontPartPatches
@@ -925,13 +1137,16 @@ size_t PCF_StaticFontPreWriteString(PCF_StaticFont *font, int len, const char *s
  */
 size_t PCF_StaticFontPreWriteStringOffset(PCF_StaticFont *font,
                                           int len, const char *str,
-                                          SDL_Rect *location,
+                                          bool tight, SDL_Rect *location,
                                           int xoffset, int yoffset,
-                                          size_t npatches, PCF_StaticFontRectPatch *patches)
+                                          size_t npatches, PCF_StaticFontPatch *patches)
 {
     size_t rv;
     SDL_Rect glyph;
     SDL_Rect cursor;
+    Uint32 offset;
+
+    offset = tight ? PCF_StaticFontGetStringTopInkOffset(font, str) : 0;
 
     cursor = (SDL_Rect){
         .x = (location ? location->x : 0) + xoffset,
@@ -939,38 +1154,58 @@ size_t PCF_StaticFontPreWriteStringOffset(PCF_StaticFont *font,
         .w = PCF_StaticFontCharWidth(font),
         .h = PCF_StaticFontCharHeight(font)
     };
+    cursor.h -= offset;
 
     if(len < 0)
         len = strlen(str);
     rv = 0;
 
     int skip = xoffset < 0 ? abs(xoffset)/PCF_StaticFontCharWidth(font) : 0;
+    /*printf("skip is: %d\n", skip);*/
     cursor.x += skip * PCF_StaticFontCharWidth(font);
     for(int i = skip; i < len && rv < npatches; i++){
+        printf("Char[%d]: %c\n",i ,str[i]);
         /*TODO SDLExt_RectAbove/Below/Before/After*/
         if(   cursor.x > SDLExt_RectLastX(location)
            || cursor.y > SDLExt_RectLastY(location))
             break;
 
-        /*If we are there, there is an intersection*/
-        if( PCF_StaticFontGetCharRect(font, str[i], &glyph) != 0){ /*0 means white space*/
-            /*h and w are implied as the values found in sfont->metrics*/
+        /*printf("Doing char[%d]: %c\n",i, str[i]);*/
+        /*If we are here, there is an intersection*/
+        if(PCF_StaticFontGetCharRect(font, str[i], &glyph) != 0){ /*0 means white space*/
             patches[rv].src = (SDL_Rect){
                 glyph.x,
-                glyph.y,
+                glyph.y + offset,
                 glyph.w,
-                glyph.h
+                glyph.h - offset
             };
         }else{
+            /* We do this to have a patch for spaces that can be used to
+             * show the cursor in SoFIS (see text_box_render() in text-box.c).
+             * in that case we need the dst part to know where on the screen
+             * the space should vs just skipping the patch altogether like in
+             * the non-offset version.
+             * TODO: Document and maybe make that configurable in both functions
+             * TODO: Consider having an empty glyph (space) at the beginining of
+             * the string that would simplify the code. At the expense of a couple
+             * of bytes (code is likeyly larger anyways).
+             * */
             patches[rv].src = (SDL_Rect){
                 -1,
                 -1,
                 PCF_StaticFontCharWidth(font),
-                PCF_StaticFontCharHeight(font)
+                PCF_StaticFontCharHeight(font) - offset
             };
         }
         SDL_Rect intersect;
         SDL_IntersectRect(&cursor, location, &intersect);
+        /*printf("patches[%d].src: (x:%d, y:%d, w:%d, h:%d)\n", rv, patches[rv].src.x, patches[rv].src.y, patches[rv].src.w, patches[rv].src.h);*/
+        /*printf("Cursor: ");*/
+        /*printf("Rect (x:%d, y:%d, w:%d, h:%d)\n",cursor.x,cursor.y,cursor.w,cursor.h);*/
+        /*printf("Location: ");*/
+        /*printf("Rect (x:%d, y:%d, w:%d, h:%d)\n",location->x,location->y,location->w,location->h);*/
+        /*printf("Intersection: ");*/
+        /*printf("Rect (x:%d, y:%d, w:%d, h:%d)\n",intersect.x,intersect.y,intersect.w,intersect.h);*/
 
         patches[rv].dst = (SDL_Point){intersect.x, intersect.y};
         if(intersect.w < patches[rv].src.w){
