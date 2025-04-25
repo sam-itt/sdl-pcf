@@ -1161,16 +1161,13 @@ size_t PCF_StaticFontPreWriteStringOffset(PCF_StaticFont *font,
     rv = 0;
 
     int skip = xoffset < 0 ? abs(xoffset)/PCF_StaticFontCharWidth(font) : 0;
-    /*printf("skip is: %d\n", skip);*/
     cursor.x += skip * PCF_StaticFontCharWidth(font);
     for(int i = skip; i < len && rv < npatches; i++){
-        printf("Char[%d]: %c\n",i ,str[i]);
         /*TODO SDLExt_RectAbove/Below/Before/After*/
         if(   cursor.x > SDLExt_RectLastX(location)
            || cursor.y > SDLExt_RectLastY(location))
             break;
 
-        /*printf("Doing char[%d]: %c\n",i, str[i]);*/
         /*If we are here, there is an intersection*/
         if(PCF_StaticFontGetCharRect(font, str[i], &glyph) != 0){ /*0 means white space*/
             patches[rv].src = (SDL_Rect){
@@ -1199,13 +1196,6 @@ size_t PCF_StaticFontPreWriteStringOffset(PCF_StaticFont *font,
         }
         SDL_Rect intersect;
         SDL_IntersectRect(&cursor, location, &intersect);
-        /*printf("patches[%d].src: (x:%d, y:%d, w:%d, h:%d)\n", rv, patches[rv].src.x, patches[rv].src.y, patches[rv].src.w, patches[rv].src.h);*/
-        /*printf("Cursor: ");*/
-        /*printf("Rect (x:%d, y:%d, w:%d, h:%d)\n",cursor.x,cursor.y,cursor.w,cursor.h);*/
-        /*printf("Location: ");*/
-        /*printf("Rect (x:%d, y:%d, w:%d, h:%d)\n",location->x,location->y,location->w,location->h);*/
-        /*printf("Intersection: ");*/
-        /*printf("Rect (x:%d, y:%d, w:%d, h:%d)\n",intersect.x,intersect.y,intersect.w,intersect.h);*/
 
         patches[rv].dst = (SDL_Point){intersect.x, intersect.y};
         if(intersect.w < patches[rv].src.w){
