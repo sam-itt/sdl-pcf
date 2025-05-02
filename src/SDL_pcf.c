@@ -697,6 +697,7 @@ void PCF_FontDumpGlyph(PCF_Font *font, int c)
         printf("No glyph for char %d\n",c);
         return;
     }
+    printf("Index of char in font: %d\n", c);
     glyph = &bitmapFont->metrics[c];
 
     w = glyph->metrics.rightSideBearing - glyph->metrics.leftSideBearing;
@@ -894,18 +895,12 @@ void PCF_FreeStaticFont(PCF_StaticFont *self)
  * @param font The static font to search in.
  * @param c    The char to search for.
  *
- * @return the index or -1 if not found
+ * @return the index or negative if not found
  */
 static inline int PCF_StaticFontGetGlyphIndex(PCF_StaticFont *font, int c)
 {
-    int i;
-
-    for(i = 0; i < font->nglyphs; i++){
-        if(font->glyphs[i] == c)
-            return i;
-    }
-
-    return -1;
+    char *pos = memchr(font->glyphs, c, font->nglyphs);
+    return pos - font->glyphs;
 }
 
 /**
