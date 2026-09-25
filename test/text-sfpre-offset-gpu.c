@@ -153,7 +153,7 @@ int main(int argc, char **argv)
                                           tight, &location,
                                           0, 0,
                                           msglen, patches);
-   printf("npatches: %d\n", npatches);
+   printf("npatches: %zu\n", npatches);
     bool dirty = true;
     do{
         ticks = SDL_GetTicks();
