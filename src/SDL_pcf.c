@@ -102,48 +102,36 @@ void PCF_CloseFont(PCF_Font *self)
     }
 }
 
-static void lit_pixel_1bpp(Uint8 *ptr, Uint32 color)
+static inline __attribute__((always_inline)) void lit_pixel(SDL_Surface *surface, Uint8 *ptr, Uint32 color)
 {
-    *ptr = color;
-}
-
-static void lit_pixel_2bpp(Uint8 *ptr, Uint32 color)
-{
-    *(Uint16 *)ptr = color;
-}
-
-static void lit_pixel_3bpp(Uint8 *ptr, Uint32 color)
-{
-#if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    ptr[0] = (color >> 16) & 0xff;
-    ptr[1] = (color >> 8) & 0xff;
-    ptr[2] = color & 0xff;
-#else
-    ptr[0] = color & 0xff;
-    ptr[1] = (color >> 8) & 0xff;
-    ptr[2] = (color >> 16) & 0xff;
-#endif
-}
-
-static void lit_pixel_4bpp(Uint8 *ptr, Uint32 color)
-{
-    *(Uint32 *)ptr = color;
-}
-
-static PixelLighter SDL_SurfaceGetLighter(SDL_Surface *surface)
-{
-
     switch(surface->format->BytesPerPixel) { //
     case 1:
-        return lit_pixel_1bpp;
+        *ptr = color;
+        break;
     case 2:
-        return lit_pixel_2bpp;
+        *(Uint16 *)ptr = color;
+        break;
     case 3:
-        return lit_pixel_3bpp;
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+        ptr[0] = (color >> 16) & 0xff;
+        ptr[1] = (color >> 8) & 0xff;
+        ptr[2] = color & 0xff;
+#else
+        ptr[0] = color & 0xff;
+        ptr[1] = (color >> 8) & 0xff;
+        ptr[2] = (color >> 16) & 0xff;
+#endif
+        break;
     case 4:
-        return lit_pixel_4bpp;
+        *(Uint32 *)ptr = color;
+        break;
     default:
-        return NULL; /*Shouldn't be reached*/
+       SDL_SetError("%s: no function to lit pixels on %d bpp surfaces such as %p",
+            __FUNCTION__,
+            surface->format->BytesPerPixel,
+            surface
+        );
+        break;
     }
 }
 
@@ -177,25 +165,17 @@ bool PCF_FontWriteChar(PCF_Font *font, int c, Uint32 color, SDL_Surface *destina
     int nbytes;
     bool rv;
     Uint8 *pixels, *line_start, *xlimit;
-    PixelLighter lit_pixel;
     int line_y;
     int xoffset;
     rv = true;
 
+#if SDL_PCF_DEBUG_RENDERING
+    Uint32 debug = SDL_MapRGBA(destination->format, 255, 0, 0, 255);
+#endif
     if(c == ' ')
         goto end;
 
     location = location ? location : &(SDL_Rect){0,0,0,0};
-
-    lit_pixel = SDL_SurfaceGetLighter(destination);
-    if(!lit_pixel){
-        SDL_SetError("%s: no function to lit pixels on %d bpp surfaces such as %p",
-            __FUNCTION__,
-            destination->format->BytesPerPixel,
-            destination
-        );
-        return false;
-    }
 
     bitmapFont  = font->xfont.fontPrivate;
     if(c >= bitmapFont->num_chars || c < 0){
@@ -234,12 +214,17 @@ bool PCF_FontWriteChar(PCF_Font *font, int c, Uint32 color, SDL_Surface *destina
         line_start = (Uint8 *)destination->pixels + (line_y * destination->pitch);
         pixels = line_start + MAX(location->x,0) * destination->format->BytesPerPixel;
         xlimit = line_start + destination->w * destination->format->BytesPerPixel;
-        for(int j = 0; j < nbytes; j++){
+        xoffset = location->x < 0 ? abs(location->x) : 0;
+        for(int j = xoffset; j < nbytes; j++){
             byte = *(unsigned char*)(glyph_line + j);
             for(int k = 0; k < 8; k++){
-                if(byte & (1 << k)){
-                    if(pixels < xlimit) /*Clip x*/
-                        lit_pixel(pixels, color);
+                if(pixels < xlimit){ /*Clip x*/
+                    if(byte & (1 << k))
+                        lit_pixel(destination, pixels, color);
+#if SDL_PCF_DEBUG_RENDERING
+                    else
+                        lit_pixel(destination, pixels, debug);
+#endif
                 }
                 pixels += destination->format->BytesPerPixel;
             }
