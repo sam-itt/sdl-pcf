@@ -179,6 +179,7 @@ bool PCF_FontWriteChar(PCF_Font *font, int c, Uint32 color, SDL_Surface *destina
     Uint8 *pixels, *line_start, *xlimit;
     PixelLighter lit_pixel;
     int line_y;
+    int xoffset;
     rv = true;
 
     if(c == ' ')
@@ -213,6 +214,10 @@ bool PCF_FontWriteChar(PCF_Font *font, int c, Uint32 color, SDL_Surface *destina
     if(location->x >= destination->w || location->y >= destination->h){
         return false;
     }
+    /*ends before the start of the surface, nothing to draw*/
+    if(location->x < 0 && abs(location->x) >= w){
+        goto end;
+    }
 
     /* FontRec.Glyph is line padding in number of bytes. See pcfReadFont
      * comments for a detailed explaination
@@ -227,7 +232,7 @@ bool PCF_FontWriteChar(PCF_Font *font, int c, Uint32 color, SDL_Surface *destina
         if(line_y > destination->h-1) break;
         if(line_y < 0) continue;
         line_start = (Uint8 *)destination->pixels + (line_y * destination->pitch);
-        pixels = line_start + location->x * destination->format->BytesPerPixel;
+        pixels = line_start + MAX(location->x,0) * destination->format->BytesPerPixel;
         xlimit = line_start + destination->w * destination->format->BytesPerPixel;
         for(int j = 0; j < nbytes; j++){
             byte = *(unsigned char*)(glyph_line + j);
@@ -340,15 +345,14 @@ bool PCF_FontWriteAt(PCF_Font *font, const char *str, Uint32 color, bool tight, 
     }
 
     if(placement & BelowRow){
-        cursor.y = row;
+        cursor.y = row + 1;
     }else if(placement & CenterOnRow){
         int ink_ascent = PCF_FontGetStringMaxInkAscent(font, str);
         int empty_top_pix = PCF_FontMetrics(font).ascent - ink_ascent;
-        int glyph_middle = empty_top_pix + roundf(ink_ascent/2.0f);
-
-        cursor.y = row - glyph_middle;
+        int glyph_middle = tight ? roundf(ink_ascent/2.0f) : empty_top_pix + roundf(ink_ascent/2.0f);
+        cursor.y = row - (glyph_middle-1);
     }else if(placement & AboveRow){
-        cursor.y = row - height - 1;
+        cursor.y = row - height;
     }else{
         SDL_SetError("%s: No setting for line placement in %d",
             __FUNCTION__,
@@ -477,6 +481,10 @@ bool PCF_FontRenderChar(PCF_Font *font, int c, SDL_Renderer *renderer, SDL_Rect 
     if(location->x >= rw || location->y >= rh){
         return false;
     }
+    /*ends before the start of the surface, nothing to draw*/
+    if(location->x < 0 && abs(location->x) >= w){
+        goto end;
+    }
 
     /* FontRec.Glyph is line padding in number of bytes. See pcfReadFont
      * comments for a detailed explaination
@@ -489,7 +497,7 @@ bool PCF_FontRenderChar(PCF_Font *font, int c, SDL_Renderer *renderer, SDL_Rect 
         /*clip y both ways*/
         if(y < 0) continue;
         if(y > rh-1) break;
-        x = location->x;
+        x = MAX(location->x, 0);
         for(int j = 0; j < nbytes; j++){
             byte = *(unsigned char*)(glyph_line + j);
             for(int k = 0; k < 8; k++){
